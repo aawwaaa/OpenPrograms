@@ -66,10 +66,10 @@ end
 
 M.process = process
 M.virtual_components = {
-    gpu = require("backend/virtual_components/gpu"),
-    keyboard = require("backend/virtual_components/keyboard"),
-    screen = require("backend/virtual_components/screen"),
-    api = require("backend/virtual_components/api"),
+    gpu = require("gmux/backend/virtual_components/gpu"),
+    keyboard = require("gmux/backend/virtual_components/keyboard"),
+    screen = require("gmux/backend/virtual_components/screen"),
+    api = require("gmux/backend/virtual_components/api"),
 }
 
 return M;
