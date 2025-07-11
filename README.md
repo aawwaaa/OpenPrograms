@@ -1,274 +1,185 @@
-* 本文由AI生成，仅供参考
-* 如与实际情况不符，请以实际情况为准
-* [English](README_en.md)
+## 文档说明
 
-## 关于 Bug
+**⚠️ 重要声明**
 
-- 窗口数量多时会出现闪烁，原因未知
+本README文档由AI自动生成，内容基于对项目代码的分析和理解。虽然我们努力确保信息的准确性，但实际功能和行为可能与文档描述存在差异。
 
-# GMUX - OpenComputers多任务桌面环境
+**请以实际代码和运行结果为准。**
 
-一个为Minecraft OpenComputers mod设计的先进多任务桌面环境系统，通过虚拟化组件、进程隔离和窗口管理，为OpenComputers提供类似现代操作系统的多任务体验。
-
-## ✨ 项目亮点
-
-GMUX打破了OpenComputers传统的单任务限制，实现了真正的多进程并发运行：
-
-- 🖥️ **窗口化桌面环境** - 类似现代操作系统的GUI界面
-- ⚡ **真正的多任务** - 多个程序同时运行而不互相干扰  
-- 🔒 **进程隔离机制** - 每个进程拥有独立的虚拟组件空间
-- 🎯 **高效资源管理** - 智能的CPU时间片分配和内存管理
-
-## 🚀 核心功能
-
-### 1. 多进程系统
-- **并发执行**: 支持多个Lua程序同时运行
-- **状态管理**: 实时监控进程状态（运行/等待/错误/死亡）
-- **资源隔离**: 每个进程拥有独立的内存空间和执行环境
-- **智能调度**: 基于事件驱动的高效进程调度算法
-
-### 2. 窗口化GUI界面
-- **窗口管理**: 创建、移动、调整大小、最小化、最大化窗口
-- **焦点控制**: 智能的窗口焦点管理和事件分发
-- **实时状态**: 窗口标题栏显示进程实时状态
-- **拖拽操作**: 支持窗口拖拽和位置调整
-
-### 3. 虚拟组件系统  
-- **GPU虚拟化**: 每个进程获得独立的GPU访问权限
-- **键盘隔离**: 键盘事件准确分发到对应进程
-- **屏幕缓冲**: 独立的屏幕缓冲区防止显示冲突
-- **组件代理**: 透明的组件访问代理机制
-
-### 4. 桌面应用生态
-- **Shell终端**: 功能完整的命令行环境
-- **程序启动器**: 图形化的程序启动和管理工具
-- **系统监控**: 实时显示CPU使用率和进程信息
-- **扩展支持**: 易于开发和集成新的桌面应用
-
-## 📦 快速开始
-
-### 下载安装
-
-1. **获取源码**
-   ```bash
-   # 在OpenComputers中下载
-   wget https://github.com/your-repo/gmux/archive/main.zip
-   # 或者克隆仓库
-   git clone https://github.com/your-repo/gmux.git
-   ```
-
-2. **部署文件**
-   ```bash
-   # 将所有文件复制到OpenComputers根目录
-   cp -r gmux/* /
-   ```
-
-### 启动使用
-
-1. **启动GMUX**
-   ```lua
-   -- 在OpenComputers中运行
-   lua /gmux.lua
-   ```
-
-2. **基本操作**
-   - 点击桌面图标启动应用程序
-   - 拖拽窗口标题栏移动窗口
-   - 点击窗口按钮进行最小化/最大化/关闭操作
-   - 使用鼠标在不同窗口间切换焦点
-
-3. **启动Shell**
-   - 点击"Shell"图标打开终端
-   - 在终端中运行任何OpenComputers程序
-   - 程序将在独立窗口中运行，不会影响其他进程
-
-## 💻 系统要求
-
-### OpenComputers环境
-- **OpenComputers版本**: 1.7.5+
-- **Minecraft版本**: 1.12.2+ (推荐)
-- **Lua版本**: 5.3+ (OpenComputers内置)
-
-### 硬件配置建议
-- **内存**: 至少3.5MB内存条 (推荐4MB+)
-- **CPU**: T2及以上处理器 (支持多线程)
-- **显卡**: T2及以上显卡 (支持多缓冲区)
-- **屏幕**: T2及以上屏幕 (推荐160x50分辨率)
-
-### 依赖组件
-```lua
--- 必需组件
-component.gpu      -- 图形处理单元
-component.screen   -- 显示屏幕  
-component.keyboard -- 键盘输入
-computer           -- 计算机核心
-
--- 可选组件
-component.ocelot   -- 日志记录 (如果可用)
-```
-
-## 🏗️ 架构说明
-
-GMUX采用分层架构设计，确保系统的稳定性和可扩展性：
-
-### 系统架构图
-```
-┌─────────────────────────────────────┐
-│           Frontend Layer            │  <- 用户界面层
-│  ┌─────────┐ ┌─────────┐ ┌─────────┐ │
-│  │Desktop  │ │Windows  │ │ Items   │ │
-│  │Manager  │ │Manager  │ │ Apps    │ │
-│  └─────────┘ └─────────┘ └─────────┘ │
-└─────────────────────────────────────┘
-           │           │           │
-┌─────────────────────────────────────┐
-│            Backend Layer            │  <- 系统核心层
-│  ┌─────────┐ ┌─────────┐ ┌─────────┐ │
-│  │Process  │ │Virtual  │ │ Patch   │ │
-│  │Manager  │ │Component│ │ System  │ │
-│  └─────────┘ └─────────┘ └─────────┘ │
-└─────────────────────────────────────┘
-           │           │           │
-┌─────────────────────────────────────┐
-│         OpenComputers API           │  <- 底层接口层
-│     computer │ component │ event     │
-└─────────────────────────────────────┘
-```
-
-### 核心模块说明
-
-**后端核心 (Backend)**
-- `core.lua`: 系统初始化和主事件循环
-- `process.lua`: 进程创建、调度和生命周期管理
-- `patch.lua`: OpenComputers API增强和修改
-- `virtual_components/`: 虚拟组件实现
-
-**前端界面 (Frontend)**  
-- `main.lua`: 前端入口点和事件处理
-- `desktop.lua`: 桌面环境和窗口管理器
-- `api.lua`: 前端API接口
-- `items/`: 桌面应用程序
-
-### 数据流说明
-1. **事件输入**: 硬件事件 → Patch系统 → 虚拟组件 → 目标进程
-2. **显示输出**: 进程渲染 → 虚拟GPU → 窗口管理器 → 物理屏幕
-3. **进程通信**: 进程A → 事件系统 → 进程B (通过信号机制)
-
-## 📁 项目结构
-
-```
-gmux/
-├── gmux.lua                 # 主入口文件
-├── bin/
-│   └── start.lua           # 启动脚本
-├── backend/                # 后端系统核心
-│   ├── config.lua          # 系统配置
-│   ├── core.lua            # 核心管理器
-│   ├── patch.lua           # API补丁系统
-│   ├── process.lua         # 进程管理器
-│   ├── patchs/             # API补丁实现
-│   │   ├── 01_computer.lua # Computer API增强
-│   │   ├── 02_event.lua    # Event系统增强
-│   │   ├── 03_component.lua# Component虚拟化
-│   │   ├── 04_thread.lua   # 线程支持
-│   │   ├── 40_keyboard.lua # 键盘虚拟化
-│   │   ├── 50_tty.lua      # TTY终端支持
-│   │   ├── 51_core_cursor.lua # 光标管理
-│   │   ├── 52_term.lua     # 终端增强
-│   │   ├── 60_io.lua       # IO系统增强
-│   │   ├── 91_gpu.lua      # GPU虚拟化
-│   │   ├── 92_keyboard.lua # 键盘事件处理
-│   │   └── 93_term.lua     # 终端显示增强
-│   └── virtual_components/ # 虚拟组件实现
-│       ├── api.lua         # 虚拟组件API
-│       ├── gpu.lua         # 虚拟GPU实现
-│       ├── keyboard.lua    # 虚拟键盘实现
-│       └── screen.lua      # 虚拟屏幕实现
-├── frontend/               # 前端用户界面
-│   ├── main.lua           # 前端主程序
-│   ├── config.lua         # 前端配置
-│   ├── desktop.lua        # 桌面管理器
-│   ├── api.lua            # 前端API接口
-│   └── items/             # 桌面应用
-│       ├── monitor.lua    # 系统监控器
-│       ├── run.lua        # 程序启动器
-│       └── shell.lua      # Shell终端
-└── README.md              # 项目文档
-```
-
-## 🔧 开发信息
-
-### 贡献指南
-
-欢迎为GMUX项目贡献代码！请遵循以下步骤：
-
-1. **Fork仓库**并创建功能分支
-2. **遵循代码规范**：
-   - 使用4空格缩进
-   - 函数和变量使用下划线命名法
-   - 添加必要的注释说明
-
-3. **测试您的更改**：
-   ```lua
-   -- 确保在OpenComputers环境中测试
-   lua /gmux.lua
-   ```
-
-4. **提交Pull Request**并详细描述您的更改
-
-### 开发环境搭建
-
-1. **准备OpenComputers测试环境**
-   - 安装Minecraft 1.12.2+
-   - 安装OpenComputers mod
-   - 创建包含足够内存的计算机
-
-2. **开发工具推荐**
-   - 代码编辑器：VS Code + Lua扩展
-   - 版本控制：Git
-   - 测试环境：OpenComputers模拟器 (可选)
-
-### API扩展开发
-
-创建新的桌面应用：
-
-```lua
--- frontend/items/your_app.lua
-return {
-    name = "Your App",
-    action = function()
-        local api = require("frontend/api")
-        local result = api.create_graphics_process({
-            gpu = component.gpu,
-            width = 80, height = 25,
-            main_path = "/your/app/path.lua",
-        })
-        api.create_window({
-            source = result,
-            process = result.process,
-            title = "Your App Title",
-            event_handler = result,
-            gpu = component.gpu,
-            x = 5, y = 5
-        })
-    end
-}
-```
-
-### 已知限制
-
-- 同时运行的进程数量受OpenComputers内存限制
-- 某些OpenComputers程序可能需要适配才能在窗口中正常运行
-- 高频率的屏幕更新可能影响性能
-
-## 📄 许可证
-
-本项目采用 **MIT许可证** 开源发布。
+如有疑问或发现文档与实际不符，请：
+1. 查看项目源代码
+2. 实际运行测试
+3. 提交Issue报告问题
 
 ---
 
-### 致谢
+**文档生成信息**
+- 生成时间：2025年
+- 生成方式：AI辅助生成
+- 基于项目：Gmux 图形化多任务操作系统
 
-感谢OpenComputers mod的开发者们为Minecraft带来了强大的计算机模拟功能，让这个项目成为可能。
+# Gmux - 图形化多任务操作系统
 
-**让我们一起为OpenComputers带来更好的多任务体验！** 🚀
+Gmux 是一个基于 OpenComputers 的图形化多任务操作系统，提供现代化的桌面环境和强大的多进程管理功能。
+
+## 功能特性
+
+### 🖥️ 图形化界面
+- 现代化的桌面环境
+- 窗口管理系统
+- 多任务支持
+- 实时图形渲染
+
+### 📸 系统截图
+
+![Gmux GPU测试界面1](README/t1_gpu.png)
+*GPU组件测试界面 - 基础功能演示*
+
+![Gmux GPU测试界面2](README/t2_gpu.png)
+*GPU组件测试界面 - 高级功能演示*
+
+![Gmux GPU测试界面3](README/t3_gpu.png)
+*GPU组件测试界面 - 完整功能演示*
+
+### 🔧 系统管理
+- 多进程管理系统
+- 虚拟组件抽象层
+- 事件驱动架构
+- 资源监控
+
+### 📱 内置应用程序
+- **Shell** - 命令行终端
+- **Lua REPL** - Lua 交互式解释器
+- **Monitor** - 系统资源监控器
+- **Run** - 程序运行器
+- **Exit** - 系统退出工具
+
+### 🛠️ 开发支持
+- 模块化应用架构
+- API 接口支持
+- 错误处理机制
+- 调试工具
+
+## 系统要求
+
+- OpenComputers 模组
+- 支持图形显示的计算机
+- GPU 组件
+- 键盘组件
+- 屏幕组件
+
+## 安装说明
+
+1. 确保你的 OpenComputers 环境已正确配置
+2. 将项目文件复制到计算机中
+3. 运行主程序：
+   ```bash
+   gmux
+   ```
+
+## 使用方法
+
+### 启动系统
+```bash
+gmux
+```
+
+### 运行应用程序
+```lua
+-- 使用 start 命令运行程序
+start /path/to/your/program.lua
+```
+
+### 系统监控
+- 使用 Monitor 应用查看系统资源使用情况
+- 监控 CPU 使用率、内存占用、能源状态
+- 管理运行中的进程
+
+### 开发应用
+```lua
+-- 创建新的图形应用程序
+return {
+    name = "My App",
+    draw_icon = function(gpu, colors, x, y)
+        -- 绘制应用图标
+    end,
+    graphics_process = {
+        width = 80, height = 25,
+        main_path = "/path/to/main.lua",
+        name = "My App"
+    }
+}
+```
+
+## 项目结构
+
+```
+gmux/
+├── backend/           # 后端核心系统
+│   ├── core.lua      # 核心引擎
+│   ├── process.lua   # 进程管理
+│   ├── config.lua    # 配置文件
+│   ├── patch.lua     # 系统补丁
+│   ├── patchs/       # 补丁文件
+│   └── virtual_components/  # 虚拟组件
+├── frontend/         # 前端界面
+│   ├── main.lua      # 主界面
+│   ├── desktop.lua   # 桌面环境
+│   ├── windows.lua   # 窗口管理
+│   ├── graphics.lua  # 图形渲染
+│   ├── api.lua       # API 接口
+│   └── apps/         # 内置应用
+├── bin/              # 系统工具
+│   └── start.lua     # 程序启动器
+└── gmux.lua          # 主入口文件
+```
+
+## 技术架构
+
+### 后端系统
+- **进程管理**: 支持多进程并发执行
+- **虚拟组件**: 抽象硬件组件接口
+- **事件处理**: 统一的事件驱动架构
+- **资源管理**: 系统资源分配和监控
+
+### 前端系统
+- **图形渲染**: 实时图形界面更新
+- **窗口管理**: 多窗口支持和布局
+- **用户交互**: 键盘和鼠标事件处理
+- **桌面环境**: 应用程序启动和管理
+
+### 应用程序框架
+- **模块化设计**: 易于扩展的应用程序架构
+- **API 接口**: 标准化的系统调用接口
+- **错误处理**: 完善的异常处理机制
+
+## 开发指南
+
+### 创建新应用
+1. 在 `frontend/apps/` 目录下创建应用文件
+2. 实现应用接口（name, draw_icon, graphics_process）
+3. 在 `frontend/main.lua` 中注册应用
+
+### 系统 API
+- `component.gmuxapi` - 主要 API 接口
+- `api.create_window()` - 创建窗口
+- `api.create_graphics_process()` - 创建图形进程
+- `api.get_processes()` - 获取进程列表
+
+## 许可证
+
+本项目采用 MIT 许可证 - 详见 [LICENSE](LICENSE) 文件
+
+## 贡献
+
+欢迎提交 Issue 和 Pull Request 来改进这个项目！
+
+## 作者
+
+Copyright © 2025 aawwaaa
+
+---
+
+*Gmux - 为 OpenComputers 带来现代化的图形化体验*
+
+---
