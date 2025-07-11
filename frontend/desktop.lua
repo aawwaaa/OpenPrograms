@@ -1,320 +1,261 @@
-local computer = require("computer")
+local graphics = require("frontend/graphics")
+
 local M = {}
 
-M.desktop_background = 0x444444
-M.gpu = nil
-local buf = nil
+local app_icon_width = 9
+local app_icon_height = 5
+local app_icon_width_mono = 10
+local app_icon_height_mono = 1
 
-function M.vgpu_source(vgpu, vscreen)
-    return {
-        copy = function(col, row)
-            vgpu._copy_to_screen(col, row)
-        end,
-        need_copy = function()
-            return vgpu._is_dirty()
-        end,
-        size = function()
-            return vgpu.getViewport()
-        end,
-        set_size = function(w, h)
-            vgpu.setResolution(w, h)
-            vscreen.pushSignal("screen_resized", w, h)
-        end
-    }
-end
-function M.empty_source()
-    return {
-        copy = function() end,
-        need_copy = function() return false end,
-        size = function() return 20, 10 end,
-    }
-end
-function M.buffer_source(gpu, buffer)
-    return {
-        copy = function(col, row)
-            local width, height = gpu.getBufferSize(buffer)
-            gpu.bitblt(gpu.getActiveBuffer(), col, row, width, height, buffer, 1, 1)
-        end,
-        need_copy = function()
-            return true
-        end,
-        size = function()
-            return gpu.getBufferSize(buffer)
-        end,
-    }
-end
-local keyboard_events = {key_down = 1, key_up = 1, clipboard = 1}
-local screen_events = {screen_resized = 1, touch = 1, drag = 1, drop = 1, scroll = 1, walk = 1}
-function M.virtual_component_event_handler(options)
-    return function(type, _, ...)
-        if keyboard_events[type] and options.keyboard then
-            options.keyboard.pushSignal(type, ...)
-        end
-        if screen_events[type] and options.screen then
-            options.screen.pushSignal(type, ...)
-        end
-    end
-end
+local default_app_icon = ([[
+/-------\
+| -|... |
+|- | ...|
+\-------/
+]]):sub(2, -2)
 
-local Window = {}
-M.Window = Window
-function Window:new(options)
-    local obj = {
-        source = options.source or M.empty_source(),
-        process = options.process or nil,
-        event_handler = options.event_handler or nil,
-        title = options.title or "Window",
-        gpu = options.gpu,
-        x = options.x or 1,
-        y = options.y or 1,
-        minimized = options.minimized or false,
-        maximized = options.maximized or false,
-        refresh = false,
-        onclose = options.onclose or function() end
-    }
-    setmetatable(obj, self)
-    self.__index = self
-    table.insert(M.windows, 1, obj)
-    return obj
-end
+local colors_blackwhite = {
+    background = 0x000000,
 
-function Window:draw()
-    -- if not self.refresh then
-    --     return
-    -- end
-    -- self.gpu.setActiveBuffer(buf)
-    local foreground = 0x888888
-    if M.get_focused_window() == self then
-        foreground = 0x000000
-    end
-    self.gpu.setForeground(foreground)
-    self.gpu.setBackground(0xffffff)
-    local width, height = self.source.size()
-    self.gpu.fill(self.x, self.y, width - 6, 1, " ")
-    local prefix = ""
-    if self.process then
-        if self.process.status == "waiting" then
-            prefix = "[Waiting] - "
-        elseif self.process.status == "dead" then
-            prefix = "[Dead] - "
-        elseif self.process.status == "error" then
-            prefix = "[Error] - "
-        end
-    end
-    self.gpu.set(self.x + 1, self.y, prefix .. self.title)
-    self.gpu.setForeground(0xffaa00)
-    self.gpu.set(self.x + width - 6, self.y, self.minimized and "<>" or "\\/")
-    if self.source.set_size then
-        self.gpu.setForeground(0x00aaff)
-        self.gpu.set(self.x + width - 4, self.y, self.maximized and "<>" or "/\\")
+    primary = 0xffffff,
+    secondary = 0xffffff,
+    text = 0xffffff,
+}
+local colors_colorful = {
+    background = 0x444444,
+
+    primary = 0x44ffff,
+    secondary = 0xff8844,
+    text = 0xffffff,
+}
+
+local colors = colors_colorful
+
+function M.init(apps)
+    if graphics.gpu.getDepth() == 1 then
+        colors = colors_blackwhite
     else
-        self.gpu.setForeground(0x888888)
-        self.gpu.set(self.x + width - 4, self.y, "--")
+        colors = colors_colorful
     end
-    self.gpu.setBackground(0xff0000)
-    self.gpu.setForeground(0xffffff)
-    self.gpu.set(self.x + width - 2, self.y, "><")
-    if not self.minimized then
-        self.source.copy(self.x, self.y + 1)
-        -- if M.get_focused_window() == self then
-        --     -- self.gpu.setActiveBuffer(0)
-        --     self.source.copy(self.x, self.y + 1)
-        -- end
-        self.refresh = false
-    end
-end
-function Window:minimize(minimized)
-    if self.minimized == minimized then return end
-    self.minimized = minimized
-end
-function Window:maximize(maximized)
-    if self.maximized == maximized then return end
-    if not self.source.set_size then return end
-    self.maximized = maximized
-    -- self.gpu.setActiveBuffer(0)
-    if maximized then
-        self.real_pos = {self.x, self.y}
-        self.real_size = {self.source.size()}
-        self.x = 1
-        self.y = 1
-        local w, h = self.gpu.getResolution()
-        self.source.set_size(w, h - 1)
+
+    M.apps = apps
+
+    M.background()
+    if graphics.gpu.getDepth() == 1 then
+        M.applications_mono()
     else
-        self.x = self.real_pos[1]
-        self.y = self.real_pos[2]
-        self.source.set_size(self.real_size[1], self.real_size[2])
-    end
-end
-function Window:focus()
-    for i, win in ipairs(M.windows) do
-        if win == self then
-            table.remove(M.windows, i)
-            break
-        end
-    end
-    table.insert(M.windows, 1, self)
-end
-function Window:set_position(x, y)
-    self.x = x
-    self.y = y
-end
-function Window:resize(w, h)
-    self.source.set_size(w, h)
-end
-function Window:close()
-    for i, win in ipairs(M.windows) do
-        if win == self then
-            table.remove(M.windows, i)
-            break
-        end
-    end
-    self.onclose()
-end
-
-M.windows = {}
-function M.create_window(options)
-    return Window:new(options)
-end
-function M.get_focused_window()
-    return M.windows[1]
-end
-function M.draw()
-    for i=#M.windows, 1, -1 do
-        M.windows[i]:draw()
+        M.applications()
     end
 end
 
-function M.test_window(x, y)
-    for i=1, #M.windows, 1 do
-        local window = M.windows[i]
-        local w, h = window.source.size()
-        if window.minimized then
-            if x >= window.x and x < window.x + w and y == window.y then
-                return window, x - window.x + 1, 1
+local background_copy = true
+local applications_copy = true
+
+function M.copy()
+    background_copy = true
+    applications_copy = true
+end
+
+function M.background()
+    local computer = require("computer")
+    local last_update = 0
+    graphics.Block:new({
+        x = 1,
+        y = 1,
+        source = {
+            copy = function(col, row, x, y, w, h)
+                graphics.gpu.setActiveBuffer(0)
+                graphics.gpu.setBackground(colors.background)
+                graphics.gpu.fill(col, row, w, h, ' ')
+            end,
+            need_copy = function()
+                return background_copy or last_update < computer.uptime()
+            end,
+            size = function()
+                graphics.gpu.setActiveBuffer(0)
+                return graphics.gpu.getResolution()
+            end,
+            after_copy = function()
+                background_copy = false
+                last_update = computer.uptime() + 1
             end
-        elseif x >= window.x and x < window.x + w and
-            y >= window.y and y < window.y + h + 1 then
-            return window, x - window.x + 1, y - window.y + 1
-        end
-    end
-    return nil, x, y
+        },
+    })
 end
 
-local touch_state = nil
-local drag_data = nil
-local last_handle = 0
-function M.handle_signal(type, ...)
-    local focused = M.get_focused_window()
-    if type == "key_down" or type == "key_up" or type == "clipboard" then
-        if not focused then return end
-        focused.event_handler(type, ...)
+local function draw_icon(app, gpu, colors, x, y)
+    gpu.setBackground(colors.background)
+    if app.draw_icon then
+        app.draw_icon(gpu, colors, x, y)
         return
     end
-    if type == "touch" then
-        local address, touch_x, touch_y, modify, player = ...
-        local window, x, y = M.test_window(touch_x, touch_y)
-        if window then
-            window:focus()
-            local w, h = window.source.size()
-            if x == w and y == h + 1 and window.source.set_size then
-                touch_state = {type = "resize", window = window}
-                return
-            end
-            if y > 1 then
-                window.event_handler(type, address, x, y - 1, modify, player)
-                return
-            end
-            if x == w - 5 or x == w - 4 then
-                window:maximize(false)
-                window:minimize(not window.minimized)
-                return
-            elseif x == w - 3 or x == w - 2 then
-                window:minimize(false)
-                window:maximize(not window.maximized)
-                return
-            elseif x == w - 1 or x == w then
-                window:close()
-                window.process:kill()
-                return
-            end
-            if window.process and window.process.status == "error" and modify then
-                require("frontend/api").show_error(window.process.error)
-                return
-            end
-            touch_state = {type = "drag", window = window, x = x, y = y}
-            return
+    app.icon = app.icon or default_app_icon
+    gpu.setBackground(colors.background)
+    gpu.setForeground(colors.secondary)
+    local x1, y1 = x, y
+    for i = 1, #app.icon do
+        local c = app.icon:sub(i, i)
+        if c == '\n' then
+            x1, y1 = x, y1 + 1
+        else
+            gpu.set(x1, y1, c)
+            x1 = x1 + 1
         end
-        M.desktop_touch(touch_x, touch_y)
+    end
+    gpu.setForeground(colors.text)
+    local x2 = x + (app_icon_width - #app.name) / 2
+    gpu.set(x2, y + app_icon_height - 1, app.name)
+end
+
+
+function M.applications()
+    local apps = M.apps
+    local w, h = graphics.gpu.getResolution()
+    h = h - 2
+    local apps_per_column = math.min(math.floor(h / (app_icon_height + 1)), #apps)
+    local columns = math.ceil(#apps / apps_per_column)
+    local width, height = (app_icon_width + 1) * columns, (app_icon_height + 1) * apps_per_column
+    local buffer = graphics.gpu.allocateBuffer(width, height)
+    local x = 1
+    local y = 1
+    graphics.gpu.setActiveBuffer(buffer)
+    graphics.gpu.setBackground(colors.background)
+    graphics.gpu.fill(1, 1, width, height, ' ')
+    for _, app in ipairs(apps) do
+        draw_icon(app, graphics.gpu, colors, x, y)
+        y = y + app_icon_height + 1
+        if y + app_icon_height > h then
+            x = x + app_icon_width + 1
+            y = 1
+        end
+    end
+    local block = graphics.Block:new({
+        x = 2,
+        y = 2,
+        source = {
+            copy = function(dst_col, dst_row, src_col, src_row, w, h)
+                graphics.gpu.bitblt(0, dst_col, dst_row, w, h, buffer, src_col, src_row)
+            end,
+            need_copy = function()
+                return applications_copy
+            end,
+            size = function()
+                return graphics.gpu.getBufferSize(buffer)
+            end,
+            after_copy = function()
+                applications_copy = false
+            end
+        }
+    })
+    block.object = {
+        touch_event = M.touch_event,
+    }
+    block.type = "apps"
+end
+
+function M.applications_mono()
+    local apps = M.apps
+    local w, h = graphics.gpu.getResolution()
+    h = h - 2
+    local apps_per_column = math.min(math.floor(h / (app_icon_height_mono)), #apps)
+    local columns = math.ceil(#apps / apps_per_column)
+    local width, height = (app_icon_width_mono + 1) * columns, (app_icon_height_mono) * apps_per_column
+    local buffer = graphics.gpu.allocateBuffer(width, height)
+    local x = 1
+    local y = 1
+    graphics.gpu.setActiveBuffer(buffer)
+    graphics.gpu.setBackground(colors.background)
+    graphics.gpu.fill(1, 1, width, height, ' ')
+    for _, app in ipairs(apps) do
+        graphics.gpu.set(x, y, "[")
+        graphics.gpu.set(x + app_icon_width_mono - 1, y, "]")
+        graphics.gpu.set(x + 1, y, app.name)
+        y = y + app_icon_height_mono
+        if y + app_icon_height_mono > h then
+            x = x + app_icon_width_mono + 1
+            y = 1
+        end
+    end
+    local block = graphics.Block:new({
+        x = 2,
+        y = 2,
+        source = {
+            copy = function(dst_col, dst_row, src_col, src_row, w, h)
+                graphics.gpu.bitblt(0, dst_col, dst_row, w, h, buffer, src_col, src_row)
+            end,
+            need_copy = function()
+                return applications_copy
+            end,
+            size = function()
+                return graphics.gpu.getBufferSize(buffer)
+            end,
+            after_copy = function()
+                applications_copy = false
+            end
+        }
+    })
+    block.object = {
+        touch_event = M.touch_event,
+    }
+    block.type = "apps_mono"
+end
+
+local function run_app(app, x, y, modify)
+    if app.run then
+        app.run(x, y, modify)
         return
     end
-    if type == "drag" then
-        local address, touch_x, touch_y, modify, player = ...
-        if not touch_state then
-            focused.event_handler(type, address, touch_x - focused.x + 1, touch_y - focused.y, modify, player)
-            return
-        end
-        drag_data = {touch_x, touch_y}
-        if last_handle + 0.1 < computer.uptime() then
-            if touch_state.type == "drag" then
-                focused:set_position(touch_x - touch_state.x + 1, touch_y - touch_state.y + 1)
-            end
-            if touch_state.type == "resize" then
-                focused:resize(touch_x - focused.x + 1, touch_y - focused.y)
-            end
-            drag_data = nil
-            last_handle = computer.uptime()
+    local api = require("frontend/api")
+    if app.graphics_process then
+        local gpu = graphics.gpu
+        app.graphics_process.gpu = gpu
+        local result = api.create_graphics_process(app.graphics_process)
+        local window = api.create_window({
+            source = result,
+            process = result.process,
+            title = app.name,
+            event_handler = result,
+            gpu = gpu, x = 2, y = 2,
+            bind = true
+        })
+        if app.handle_window then
+            app.handle_window(window)
         end
         return
     end
-    if type == "drop" then
-        if touch_state then
-            if drag_data then
-                local touch_x, touch_y = table.unpack(drag_data)
-                if touch_state.type == "drag" then
-                    focused:set_position(touch_x - touch_state.x + 1, touch_y - touch_state.y + 1)
-                end
-                if touch_state.type == "resize" then
-                    focused:resize(touch_x - focused.x + 1, touch_y - focused.y)
-                end
-            end
-            touch_state = nil
-            return
-        end
-        local address, touch_x, touch_y, modify, player = ...
-        focused.event_handler(type, address, touch_x - focused.x + 1, touch_y - focused.y, modify, player)
-    end
+    api.show_error("No run function for app " .. app.name)
 end
 
-M.desktop_items = {}
-
-function M.init()
-    -- buf = M.gpu.allocateBuffer(M.gpu.getResolution())
-end
-
-M.gpu_usage = 0
-function M.tick()
-    local check = computer.uptime()
-    M.gpu.setActiveBuffer(0)
-    local w, h = M.gpu.getResolution()
-    M.gpu.setBackground(0x444444)
-    M.gpu.fill(1, 1, w, h, " ")
-    M.gpu.setForeground(0xffffff)
-    for i, item in ipairs(M.desktop_items) do
-        M.gpu.set(1, i, "[" .. item.name .. "]")
+function M.touch_event(_, type, mode, _, x, y, modify, _)
+    if type ~= "touch" then
+        return
     end
-    for i=#M.windows, 1, -1 do
-        M.windows[i].refresh = true
+    local apps = M.apps
+    graphics.gpu.setActiveBuffer(0)
+    local w, h = graphics.gpu.getResolution()
+    h = h - 2
+    local app_index = nil
+    if mode == "apps" then
+        local apps_per_column = math.min(math.floor(h / (app_icon_height + 1)), #apps)
+        local app_x = math.floor((x - 1) / (app_icon_width + 1))
+        local app_y = math.floor((y - 1) / (app_icon_height + 1))
+        app_index = app_y + app_x * apps_per_column + 1
+    elseif mode == "apps_mono" then
+        local apps_per_column = math.min(math.floor(h / (app_icon_height_mono)), #apps)
+        local app_x = math.floor((x - 1) / (app_icon_width_mono + 1))
+        local app_y = math.floor((y - 1) / (app_icon_height_mono))
+        app_index = app_y + app_x * apps_per_column + 1
     end
-    M.draw()
-    -- M.gpu.bitblt(0, 1, 1, w, h, buf, 1, 1)
-    local deltat = computer.uptime() - check
-    M.gpu_usage = deltat / require("frontend/config").gpu_usage_factor
-end
-function M.desktop_touch(x, y)
-    local item = M.desktop_items[y]
-    if not item then return end
-    if x > #item.name + 2 then return end
-    item.action()
+    if app_index < 1 or app_index > #apps then
+        return
+    end
+    local app = apps[app_index]
+    local ok, err = xpcall(function()
+        run_app(app, x, y, modify)
+    end, function(e)
+        local api = require("frontend/api")
+        api.show_error("Application failed to start: " .. tostring(e) .. "\n" .. debug.traceback())
+    end)
 end
 
 return M

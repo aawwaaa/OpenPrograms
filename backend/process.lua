@@ -8,6 +8,7 @@ M.current_process = nil
 M.processes = {}
 
 M.error_handler = function(process, error)
+    io.stderr:write("\n\n\n")
     io.stderr:write("An error occurred in process " .. process.id .. ":\n")
     io.stderr:write(error)
     io.stderr:flush()
@@ -26,7 +27,8 @@ function Process:new(options)
         instances = patch.create_patch_instances(options),
         parent = M.current_process,
         main = nil,
-        name = options.name or "Process#" .. process_inc_id
+        name = options.name or ("Process#" .. process_inc_id),
+        error_handler = options.error_handler or M.error_handler,
     }
     local function main()
         local status, trace = xpcall(function(...)
@@ -99,7 +101,7 @@ function Process:update()
     end
     self.instances.computer._reset_last_yield()
     if self.status == "error" then
-        M.error_handler(self, self.error)
+        self.error_handler(self, self.error)
     end
 end
 

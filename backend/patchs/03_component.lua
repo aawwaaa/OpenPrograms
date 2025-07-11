@@ -28,6 +28,9 @@ return function(instances, options)
     function component._get_components()
         return components
     end
+    function component._real_component()
+        return _component
+    end
     function component._add_component(table)
         if type(table) == "table" then
             components[table.address] = table

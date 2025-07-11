@@ -1,10 +1,14 @@
 local math = require("math")
 local vgpu_callbacks = {}
+local keep = 32
 return function(options)
     local real = options.gpu
 
     local width = options.width or 30
     local height = options.height or 19
+    if width * height > real.freeMemory() then
+        height = math.floor((real.freeMemory() - keep) / width)
+    end
     local viewportWidth = width
     local viewportHeight = height
     local screenBuffer = real.allocateBuffer(width, height)
@@ -72,9 +76,18 @@ return function(options)
     end
     function gpu.setResolution(w, h)
         local oldBuffer = screenBuffer
-        screenBuffer = real.allocateBuffer(w, h)
-        real.bitblt(screenBuffer, 0, 0, math.min(width, w), math.min(height, h), oldBuffer, 0, 0)
-        freeBuffer(oldBuffer)
+        if w * h <= real.freeMemory() - keep then
+            screenBuffer = real.allocateBuffer(w, h)
+            real.bitblt(screenBuffer, 0, 0, math.min(width, w), math.min(height, h), oldBuffer, 0, 0)
+            freeBuffer(oldBuffer)
+        elseif w * h <= real.freeMemory() + width * height - keep then
+            freeBuffer(oldBuffer)
+            screenBuffer = real.allocateBuffer(w, h)
+        else
+            freeBuffer(oldBuffer)
+            h = math.floor((real.freeMemory() - keep) / w)
+            screenBuffer = real.allocateBuffer(w, h)
+        end
         if activeBuffer == oldBuffer then activeBuffer = screenBuffer end
         width = w
         height = h
@@ -164,8 +177,8 @@ return function(options)
         return real.bitblt(dst, col, row, w, h, src, fromCol, fromRow)
     end
 
-    function gpu._copy_to_screen(col, row)
-        real.bitblt(real.getActiveBuffer(), col, row, viewportWidth, viewportHeight, screenBuffer, width - viewportWidth + 1, height - viewportHeight + 1)
+    function gpu._copy_to_screen(col, row, x, y, w, h)
+        real.bitblt(0, col, row, w, h, screenBuffer, x, y)
         dirty = false
     end
     function gpu._is_dirty()
