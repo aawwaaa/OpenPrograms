@@ -201,7 +201,7 @@ local function main()
             colors.energy_filled_background, colors.energy_filled,
             colors.background, colors.energy
         )
-        local backend = require("backend/core")
+        local backend = require("gmux/backend/core")
         draw_bar(3,
             math.floor(backend.cpu_usage * 100 + 0.5), 100, "CPU",
             colors.cpu_filled_background, colors.cpu_filled,

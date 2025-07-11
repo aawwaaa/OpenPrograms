@@ -1,6 +1,5 @@
 local graphics = require("gmux/frontend/graphics")
 local math = require("math")
-local debug = require("debug")
 
 local M = {}
 
