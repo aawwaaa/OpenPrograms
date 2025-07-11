@@ -1,6 +1,6 @@
-local backend = require("backend/core")
+local backend = require("gmux/backend/core")
 local component = require("component")
-local main = require("frontend/main")
+local main = require("gmux/frontend/main")
 
 local gpu = component.gpu
 

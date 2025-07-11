@@ -4,7 +4,7 @@ for k, v in pairs(require("computer")) do
 end
 local coroutine = require("coroutine")
 local math = require("math")
-local config = require("backend/config")
+local config = require("gmux/backend/config")
 return function(instances)
     local computer = {}
     

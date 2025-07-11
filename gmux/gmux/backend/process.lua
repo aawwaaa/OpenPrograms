@@ -1,4 +1,4 @@
-local patch = require("backend/patch")
+local patch = require("gmux/backend/patch")
 local coroutine = require("coroutine")
 local computer = require("computer")
 local process = require("process")

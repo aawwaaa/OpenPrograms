@@ -1,3 +1,6 @@
+local math = require("math")
+local debug = require("debug")
+
 local M = {}
 
 M.gpu = nil

@@ -1,5 +1,5 @@
 local coroutine = require("coroutine")
-local config = require("backend/config")
+local config = require("gmux/backend/config")
 
 local M = {}
 local process = {
@@ -11,18 +11,18 @@ M.set_process = function(p)
 end
 
 M.patchs = {
-    require("backend/patchs/01_computer"),
-    require("backend/patchs/02_event"),
-    require("backend/patchs/03_component"),
-    require("backend/patchs/04_thread"),
-    require("backend/patchs/40_keyboard"),
-    require("backend/patchs/50_tty"),
-    require("backend/patchs/51_core_cursor"),
-    require("backend/patchs/52_term"),
-    require("backend/patchs/60_io"),
-    require("backend/patchs/91_gpu"),
-    require("backend/patchs/92_keyboard"),
-    require("backend/patchs/93_term"),
+    require("gmux/backend/patchs/01_computer"),
+    require("gmux/backend/patchs/02_event"),
+    require("gmux/backend/patchs/03_component"),
+    require("gmux/backend/patchs/04_thread"),
+    require("gmux/backend/patchs/40_keyboard"),
+    require("gmux/backend/patchs/50_tty"),
+    require("gmux/backend/patchs/51_core_cursor"),
+    require("gmux/backend/patchs/52_term"),
+    require("gmux/backend/patchs/60_io"),
+    require("gmux/backend/patchs/91_gpu"),
+    require("gmux/backend/patchs/92_keyboard"),
+    require("gmux/backend/patchs/93_term"),
 }
 
 M.package_patchs = {

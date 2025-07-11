@@ -1,7 +1,7 @@
-local process = require("backend/process")
-local patch = require("backend/patch")
+local process = require("gmux/backend/process")
+local patch = require("gmux/backend/patch")
 local computer = require("computer")
-local config = require("backend/config")
+local config = require("gmux/backend/config")
 
 local M = {}
 local exited = false

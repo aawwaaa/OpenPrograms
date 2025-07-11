@@ -7,7 +7,7 @@ return {
 \-------/]]),
     run = function()
         local window;
-        window = require("frontend/api").create_window_buffer({
+        window = require("gmux/frontend/api").create_window_buffer({
             width = 30, height = 2,
             x = 10, y = 4,
             title = "Exit",
@@ -19,7 +19,7 @@ return {
                     return
                 end
                 if x <= 8 then
-                    require("backend/core").exit()
+                    require("gmux/backend/core").exit()
                 elseif x >= 22 then
                     window:close()
                 end

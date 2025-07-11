@@ -1,4 +1,6 @@
-local graphics = require("frontend/graphics")
+local graphics = require("gmux/frontend/graphics")
+local math = require("math")
+local debug = require("debug")
 
 local M = {}
 
@@ -205,7 +207,7 @@ local function run_app(app, x, y, modify)
         app.run(x, y, modify)
         return
     end
-    local api = require("frontend/api")
+    local api = require("gmux/frontend/api")
     if app.graphics_process then
         local gpu = graphics.gpu
         app.graphics_process.gpu = gpu
@@ -253,7 +255,7 @@ function M.touch_event(_, type, mode, _, x, y, modify, _)
     local ok, err = xpcall(function()
         run_app(app, x, y, modify)
     end, function(e)
-        local api = require("frontend/api")
+        local api = require("gmux/frontend/api")
         api.show_error("Application failed to start: " .. tostring(e) .. "\n" .. debug.traceback())
     end)
 end

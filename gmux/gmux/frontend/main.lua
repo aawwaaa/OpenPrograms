@@ -1,10 +1,10 @@
 local event = require("event")
 local component = require("component")
-local windows = require("frontend/windows")
-local graphics = require("frontend/graphics")
-local desktop = require("frontend/desktop")
+local windows = require("gmux/frontend/windows")
+local graphics = require("gmux/frontend/graphics")
+local desktop = require("gmux/frontend/desktop")
 local os = require("os")
-local api = require("frontend/api")
+local api = require("gmux/frontend/api")
 
 local M = {}
 
@@ -24,11 +24,11 @@ function M.main(be)
     end, math.huge, math.huge)
     windows.init()
     desktop.init({
-        require("frontend/apps/shell"),
-        require("frontend/apps/lua_repl"),
-        require("frontend/apps/run"),
-        require("frontend/apps/monitor"),
-        require("frontend/apps/exit")
+        require("gmux/frontend/apps/shell"),
+        require("gmux/frontend/apps/lua_repl"),
+        require("gmux/frontend/apps/run"),
+        require("gmux/frontend/apps/monitor"),
+        require("gmux/frontend/apps/exit")
     })
 
     while true do

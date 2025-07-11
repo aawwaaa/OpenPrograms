@@ -1,6 +1,6 @@
-local desktop = require("frontend/windows")
-local graphics = require("frontend/graphics")
-local backend = require("backend/core")
+local desktop = require("gmux/frontend/windows")
+local graphics = require("gmux/frontend/graphics")
+local backend = require("gmux/backend/core")
 local M = {}
 
 function M.create_headless_process(options)

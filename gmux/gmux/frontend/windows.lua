@@ -1,6 +1,6 @@
-local graphics = require("frontend/graphics")
+local graphics = require("gmux/frontend/graphics")
 local unicode = require("unicode")
-local desktop = require("frontend/desktop")
+local desktop = require("gmux/frontend/desktop")
 
 local M = {}
 
