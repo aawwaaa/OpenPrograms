@@ -13,7 +13,7 @@ for address in gpus do
 end
 table.sort(gpu_addresses)
 for _, address in ipairs(gpu_addresses) do
-    local screen = component.invoke(address, "getScreen")
+    local screen = component.invoke(address, "getScreen") or "nil"
     local address_disp = address:sub(1, 8)
     if component.isPrimary(address) then
         address_disp = address_disp .. "*"
