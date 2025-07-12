@@ -14,6 +14,18 @@ M.error_handler = function(process, error)
     io.stderr:flush()
 end
 
+function M.get_traceback()
+    local traceback = debug.traceback()
+    -- 只获取第一个 (...tail calls...) 之后的内容
+    local tb = traceback
+    local idx = tb:find("%(%.%%.%.tail calls%.%.%.%)")
+    if idx then
+        return tb:sub(idx + #"(...)tail calls...)")
+    else
+        return tb
+    end
+end
+
 M.Process = {}
 local Process = M.Process
 local process_inc_id = 1
@@ -41,7 +53,7 @@ function Process:new(options)
                 end
                 options.main(...)
             end,
-            function(msg) return msg .. "\n" .. debug.traceback() end,
+            function(msg) return msg .. "\n" .. M.get_traceback() end,
             table.unpack(options.args or {}))
         if not status then
             obj.status = "error"
@@ -76,7 +88,7 @@ function Process:update()
             self.status = "running"
             M.current_process = self
             for _, f in ipairs(self.instances.loads.load) do f(self) end
-            local result = table.pack(xpcall(resume, function(err) return err .. "\n" .. debug.traceback() end, self.main))
+            local result = table.pack(xpcall(resume, function(err) return err .. "\n" .. M.get_traceback() end, self.main))
             for _, f in ipairs(self.instances.loads.unload) do f(self) end
             M.current_process = nil
             if not table.remove(result, 1) then
@@ -130,6 +142,14 @@ function Process:remove()
     end
 end
 
+function Process:push_signal(name, source, ...)
+    self.instances.component._handle_component_signal_1(name, source, ...)
+    if self.instances.component._has_component(source) then
+        self.instances.computer.pushSignal(name, source, ...)
+    end
+    self.instances.component._handle_component_signal_2(name, source, ...)
+end
+
 function M.create_process(options)
     return Process:new(options)
 end
@@ -154,9 +174,7 @@ end
 function M.push_signal(name, source, ...)
     if name == nil then return end
     for _, process in ipairs(M.processes) do
-        if process.instances.component._has_component(source) then
-            process.instances.computer.pushSignal(name, source, ...)
-        end
+        process:push_signal(name, source, ...)
     end
 end
 function M.all_waiting()

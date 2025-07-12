@@ -1,6 +1,7 @@
 local graphics = require("gmux/frontend/graphics")
 local unicode = require("unicode")
 local desktop = require("gmux/frontend/desktop")
+local component = require("component")
 
 local M = {}
 
@@ -357,7 +358,12 @@ function Window:update()
 end
 
 local touch_events = {
-    touch = 1, drag = 1, drop = 1
+    touch = 1, drag = 1, drop = 1, scroll = 1, walk = 1
+}
+local input_events = {
+    touch = 1, drag = 1, drop = 1,
+    screen_resized = 1, scroll = 1, walk = 1,
+    key_down = 1, key_up = 1, clipboard = 1
 }
 function M.set_current_touch(object)
     current_touch = object
@@ -371,8 +377,14 @@ function M.handle_signal(signal, ...)
         xpcall(function(...)
             func(...)
         end, function(e)
-            require("frontend/api").show_error("An error occurred in the event handler: \n" .. tostring(e) .. "\n" .. debug.traceback())
+            require("frontend/api").show_error("An error occurred in the event handler: \n" .. tostring(e) .. "\n" .. desktop.get_traceback())
         end, ...)
+    end
+    if input_events[signal] ~= nil then
+        local source = ...
+        if not component.isPrimary(source) then
+            return
+        end
     end
     if touch_events[signal] == nil then
         if M.focused_window then

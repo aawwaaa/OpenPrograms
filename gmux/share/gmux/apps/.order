@@ -1,0 +1,7 @@
+{
+    shell = 0,
+    lua_repl = 10,
+    run = 20,
+    monitor = 30,
+    exit = 1000
+}

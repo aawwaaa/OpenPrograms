@@ -234,7 +234,7 @@ local function main()
         local y = 3
         for address, type in pairs(components) do
             gpu.setForeground(colors.primary)
-            if component._real_component().getPrimary(type).address == address then
+            if component._real_component().isPrimary(address) then
                 type = type .. "*"
             end
             gpu.set(1, y, type)

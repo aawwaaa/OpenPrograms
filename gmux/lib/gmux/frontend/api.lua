@@ -17,6 +17,7 @@ function M.create_headless_process(options)
     local process = backend.process.create_process({
         main = options.main or function() dofile(options.main_path) end,
         components = components,
+        components_auto_add = true,
         error_handler = function(process, error)
             M.show_error(string.format("Error in process %s:\n%s", process.id, error))
         end,
@@ -30,9 +31,14 @@ function M.create_graphics_process(options)
         default_components = {}
         for k, v in pairs(current_process.instances.component._get_components()) do
             local type = current_process.instances.component.type(k)
-            if type ~= "gpu" and type ~= "screen" and type ~= "keyboard" then
-                default_components[k] = v
+            if type == "gpu" or type == "screen" or type == "keyboard" then
+                if current_process.instances.component._real_component().isPrimary(k)
+                    or _G.type(v) == "table" then
+                    goto continue
+                end
             end
+            default_components[k] = v
+            ::continue::
         end
     end
     graphics.gpu.setActiveBuffer(0)
@@ -57,6 +63,7 @@ function M.create_graphics_process(options)
     local process = backend.process.create_process({
         main = options.main or function() dofile(options.main_path) end,
         components = components,
+        components_auto_add = true,
         error_handler = function(process, error)
             M.show_error(string.format("Error in process %s:\n%s", process.id, error))
         end,
@@ -134,7 +141,6 @@ function M.get_windows()
 end
 
 function M.show_error(error)
-    require("component").ocelot.log(error)
     graphics.gpu.setActiveBuffer(0)
     local width, height = graphics.gpu.getResolution()
     width = width - 10

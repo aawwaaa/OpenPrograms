@@ -33,13 +33,13 @@ Gmux is a graphical multitasking operating system based on OpenComputers, provid
 
 ### 📸 System Screenshots
 
-![Gmux GPU Test Interface 1](README/t1_gpu.png)
+![Gmux GPU Test Interface 1](/README/gmux/t1_gpu.png)
 *GPU Component Test Interface - Basic Function Demo*
 
-![Gmux GPU Test Interface 2](README/t2_gpu.png)
+![Gmux GPU Test Interface 2](/README/gmux/t2_gpu.png)
 *GPU Component Test Interface - Advanced Function Demo*
 
-![Gmux GPU Test Interface 3](README/t3_gpu.png)
+![Gmux GPU Test Interface 3](/README/gmux/t3_gpu.png)
 *GPU Component Test Interface - Complete Function Demo*
 
 ### 🔧 System Management

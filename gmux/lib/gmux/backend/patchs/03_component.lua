@@ -3,7 +3,12 @@ for k, v in pairs(require("component")) do
     _component[k] = v
 end
 return function(instances, options)
-    
+    local _primaries = {}
+    for k, v in pairs(_component.list()) do
+        if _component.isPrimary(k) then
+            _primaries[k] = v
+        end
+    end
     local computer = instances.computer
     local event = instances.event
     local component = {}
@@ -52,6 +57,18 @@ return function(instances, options)
     function component._has_component(address)
         return components[address] ~= nil
     end
+
+    function component._handle_component_signal_1(name, source, ...)
+        if name == "component_added" and options.components_auto_add then
+            component._add_component(source)
+        end
+    end
+    function component._handle_component_signal_2(name, source, ...)
+        if name == "component_removed" then
+            component._remove_component(source)
+        end
+    end
+
     function component.doc(address, method)
         if type(components[address]) ~= "table" then
             return _component.doc(address, method)
@@ -78,32 +95,61 @@ return function(instances, options)
     end
     function component.list(filter, exact)
         local output = {}
-        for k, v in pairs(components) do
-            if k ~= "_index" then
-                if not filter then
-                    table.insert(output, k)
-                elseif type(v) ~= "table" then
-                    if exact then
-                        if _component.type(k) == filter then
-                            table.insert(output, k)
-                        end
-                    else
-                        if _component.type(k):match(filter) then
-                            table.insert(output, k)
-                        end
-                    end
-                elseif type(v) == "table" then
-                    if exact then
-                        if v.type == filter then
-                            table.insert(output, k)
-                        end
-                    else
-                        if v.type:match(filter) then
-                            table.insert(output, k)
-                        end
-                    end
+        local function filte(c)
+            if not filter then
+                return true
+            end
+            if type(c) ~= "table" then
+                if exact then
+                    return _component.type(c) == filter
+                else
+                    return _component.type(c):match(filter)
                 end
             end
+            if type(c) == "table" then
+                if exact then
+                    return c.type == filter
+                else
+                    return c.type:match(filter)
+                end
+            end
+        end
+        for k, v in pairs(_component.list()) do
+            if component._has_component(k) then
+                if _primaries[k] ~= nil and filte(k) then
+                    table.insert(output, k)
+                end
+            end
+        end
+        for k, v in pairs(components) do
+            if k == "_index" or type(v) ~= "table" then
+                goto continue
+            end
+            for _, v in pairs(output) do
+                if v == k then
+                    goto continue
+                end
+            end
+            if not filte(v) then
+                goto continue
+            end
+            table.insert(output, k)
+            ::continue::
+        end
+        for k, v in pairs(components) do
+            if k == "_index" then
+                goto continue
+            end
+            for _, v in pairs(output) do
+                if v == k then
+                    goto continue
+                end
+            end
+            if not filte(type(v) == "table" and v or k) then
+                goto continue
+            end
+            table.insert(output, k)
+            ::continue::
         end
         output._index = 0
         setmetatable(output, {

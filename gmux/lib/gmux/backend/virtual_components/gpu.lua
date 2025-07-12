@@ -1,6 +1,6 @@
 local math = require("math")
 local vgpu_callbacks = {}
-local keep = 32
+local keep = 48
 return function(options)
     local real = options.gpu
 
