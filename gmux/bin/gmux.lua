@@ -1,7 +1,7 @@
 local package = require("package")
 
 for k in pairs(package.loaded) do
-    if type(k) == "string" and k:sub(1, 5) == "gmux/" then
+    if type(k) == "string" and (k:sub(1, 5) == "gmux/" or k:sub(1, #"/usr/share/gmux") == "/usr/share/gmux") then
         package.loaded[k] = nil
     end
 end

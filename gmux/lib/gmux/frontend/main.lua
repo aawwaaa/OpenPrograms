@@ -30,7 +30,7 @@ local function load_apps()
         order = serialization.unserialize(order)
     end
     local original = package.path
-    package.path = original .. ";?.lua"
+    package.path = original .. ";?.lua;?/main.lua"
     for app in filesystem.list(path) do
         app = app:gsub("%.lua$", "")
         if app == ".order" then

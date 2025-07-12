@@ -1,6 +1,6 @@
 local colors_colorful = {
-    background = 0x444444,
-    background_selected = 0x000000,
+    background = 0x888888,
+    background_selected = 0x222222,
     primary_selected = 0x00ffff,
     primary = 0x00ffff,
     secondary_selected = 0xff8800,
