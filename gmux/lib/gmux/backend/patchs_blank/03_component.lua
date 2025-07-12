@@ -2,7 +2,6 @@ local _component = {}
 for k, v in pairs(require("component")) do
     _component[k] = v
 end
-local ocelot = require("component").ocelot
 return function(instances, options)
     local _primaries = {}
     for k, v in _component.list() do
