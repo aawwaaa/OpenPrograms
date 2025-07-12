@@ -1,12 +1,13 @@
 local colors_colorful = {
-    background = 0x888888,
-    background_input = 0x666666,
+    background = 0x666666,
+    background_input = 0x555555,
     background_selected = 0x222222,
     primary_selected = 0x00ffff,
     primary = 0x00ffff,
     secondary_selected = 0xff8800,
     secondary = 0xff8800,
     text = 0xffffff,
+    text_input = 0xffffff,
 }
 local black = 0x000000
 local white = 0xffffff
@@ -18,7 +19,8 @@ local colors_blackwhite = {
     primary = white,
     secondary_selected = black,
     secondary = white,
-    text = white
+    text = white,
+    text_input = black
 }
 
 local function subwindow(title, func)
@@ -26,7 +28,7 @@ local function subwindow(title, func)
     local api = component.gmuxapi
 
     local result = api.create_graphics_process({
-        width = 40, height = 20,
+        width = 20, height = 20,
         main = func
     })
     local window = api.create_window({
@@ -46,7 +48,7 @@ local function change_value(colors, x, y, value)
     local computer = require("computer")
     local gpu = component.gpu
     term.setCursor(x, y)
-    gpu.setForeground(colors.text)
+    gpu.setForeground(colors.text_input)
     gpu.setBackground(colors.background_selected)
     term.clearLine()
     term.setCursor(x, y)
@@ -69,7 +71,7 @@ local function term_input(colors, x, y, hint)
     local component = require("component")
     local gpu = component.gpu
     term.setCursor(x, y)
-    gpu.setForeground(colors.text)
+    gpu.setForeground(colors.text_input)
     gpu.setBackground(colors.background_selected)
     term.clearLine()
     term.setCursor(x, y)
@@ -466,7 +468,7 @@ local function main()
         gpu.set(3, y, config_file)
         y = y + 1
         gpu.setBackground(colors.background_selected)
-        gpu.setForeground(colors.secondary)
+        gpu.setForeground(colors.secondary_selected)
         gpu.fill(1, y, w, 1, " ")
         gpu.set(1, y, "Save")
         gpu.set(11, y, "Run")
@@ -499,7 +501,7 @@ local function main()
         gpu.fill(1, y, w, 1, " ")
         gpu.set(1, y, "Components")
         gpu.setBackground(colors.background_selected)
-        gpu.setForeground(colors.secondary)
+        gpu.setForeground(colors.secondary_selected)
         y = y + 1
         gpu.set(1, y, "Add")
         gpu.set(11, y, "Remove")
