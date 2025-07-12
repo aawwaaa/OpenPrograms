@@ -275,7 +275,10 @@ local function add_component(components, redraw)
             end
         end
         while true do
-            local _, _, x, y, mask = event.pull("touch")
+            local _, source, x, y, mask = event.pull("touch")
+            if source ~= component.screen.address then
+                goto continue
+            end
             if y == 1 then
                 local address = term_input(colors, 1, 1, function(line, pos)
                     local results = {}
@@ -394,13 +397,17 @@ local function edit_component(comp, _redraw)
         end
         redraw()
         while true do
-            local type, _, x, y, mask = event.pull()
+            local type, source, x, y, mask = event.pull()
+            if source ~= component.screen.address then
+                goto continue
+            end
             if type == "touch" and interacts[y] then
                 interacts[y]()
             end
             if type == "screen_resized" then
                 redraw()
             end
+            ::continue::
         end
     end)
 end
@@ -576,9 +583,12 @@ local function main()
     end, math.huge, math.huge)
 
     while true do
-        local type, _, x, y, mask = event.pull(1, "touch")
+        local type, source, x, y, mask = event.pull(1, "touch")
         if type == nil then
             redraw()
+            goto continue
+        end
+        if source ~= component.screen.address then
             goto continue
         end
         if y <= 3 then

@@ -294,7 +294,10 @@ local function main()
     event.listen("screen_resize", function(_, x, y)
         redraw()
     end, math.huge, math.huge)
-    event.listen("touch", function(_, _, x, y, mask)
+    event.listen("touch", function(_, source, x, y, mask)
+        if source ~= component.screen.address then
+            return
+        end
         if y == 1 then
             local index = math.floor(x / 10) + 1
             if index < 1 or index > #tabs then
