@@ -270,7 +270,7 @@ end
 
 function M.find_block(x, y)
     for _, block in ipairs(M.blocks) do
-        if block:contains(x, y) then
+        if block.shown and block:contains(x, y) then
             return block
         end
     end

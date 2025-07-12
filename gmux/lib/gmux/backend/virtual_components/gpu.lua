@@ -1,8 +1,10 @@
 local math = require("math")
 local vgpu_callbacks = {}
-local keep = 48
 return function(options)
     local real = options.gpu
+    real.setActiveBuffer(0)
+    local real_width, real_height = real.getResolution()
+    local keep = real_width * 1
 
     local width = options.width or 30
     local height = options.height or 19
