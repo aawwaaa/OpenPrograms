@@ -14,18 +14,6 @@ M.error_handler = function(process, error)
     io.stderr:flush()
 end
 
-function M.get_traceback()
-    local traceback = debug.traceback()
-    -- 只获取第一个 (...tail calls...) 之后的内容
-    local tb = traceback
-    local idx = tb:find("%(%.%%.%.tail calls%.%.%.%)")
-    if idx then
-        return tb:sub(idx + #"(...)tail calls...)")
-    else
-        return tb
-    end
-end
-
 M.Process = {}
 local Process = M.Process
 local process_inc_id = 1
@@ -44,16 +32,22 @@ function Process:new(options)
     }
     local function main()
         local status, trace = xpcall(function(...)
-                while obj.instances.computer._signal_queue_has_element() do
-                    obj.instances.event.pull(0)
+                if obj.instances.event then
+                    while obj.instances.computer._signal_queue_has_element() do
+                        obj.instances.event.pull(0)
+                    end
+                    obj.instances.component._push_primaries()
+                    while obj.instances.computer._signal_queue_has_element() do
+                        obj.instances.event.pull(0)
+                    end
                 end
-                obj.instances.component._push_primaries()
-                while obj.instances.computer._signal_queue_has_element() do
-                    obj.instances.event.pull(0)
+                if options.init then
+                    options.main(options.init(self, ...))
+                    return
                 end
                 options.main(...)
             end,
-            function(msg) return msg .. "\n" .. M.get_traceback() end,
+            debug.traceback,
             table.unpack(options.args or {}))
         if not status then
             obj.status = "error"
@@ -67,7 +61,9 @@ function Process:new(options)
     self.__index = self
 
     table.insert(M.processes, obj)
-    obj.instances.component._push_components()
+    if obj.instances.event then
+        obj.instances.component._push_components()
+    end
     return obj
 end
 
@@ -78,8 +74,8 @@ function Process:update()
         return
     end
     for _, comp in pairs(self.instances.component._get_components()) do
-        if type(comp) == "table" and comp.active then
-            comp:active()
+        if type(comp) == "table" and comp._active then
+            comp:_active()
         end
     end
     if coroutine.status(self.main) ~= "dead" then
@@ -88,9 +84,12 @@ function Process:update()
             self.status = "running"
             M.current_process = self
             for _, f in ipairs(self.instances.loads.load) do f(self) end
-            local result = table.pack(xpcall(resume, function(err) return err .. "\n" .. M.get_traceback() end, self.main))
+            local result = table.pack(xpcall(resume, debug.traceback, self.main))
             for _, f in ipairs(self.instances.loads.unload) do f(self) end
             M.current_process = nil
+            if self.status == "dead" then
+                return
+            end
             if not table.remove(result, 1) then
                 self.status = "error"
                 self.error = "Resume error: " .. result[1]
@@ -107,9 +106,13 @@ function Process:update()
                 end
             end
         end
-    elseif not self.instances.thread._has_alive() then
-        self.status = "dead"
-        self.instances.thread._kill_threads()
+    else
+        if not self.instances.thread then
+            self.status = "dead"
+        elseif not self.instances.thread._has_alive() then
+            self.status = "dead"
+            self.instances.thread._kill_threads()
+        end
     end
     self.instances.computer._reset_last_yield()
     if self.status == "error" then
@@ -119,7 +122,9 @@ end
 
 function Process:kill()
     self.status = "dead"
-    self.instances.thread._kill_threads()
+    if self.instances.thread then
+        self.instances.thread._kill_threads()
+    end
 end
 
 function Process:remove()
@@ -133,8 +138,8 @@ function Process:remove()
         self:kill()
     end
     for _, comp in pairs(self.instances.component._get_components()) do
-        if type(comp) == "table" and comp.remove then
-            comp:remove()
+        if type(comp) == "table" and comp._remove then
+            comp:_remove()
         end
     end
     if process.findProcess(self.main) then
@@ -156,16 +161,17 @@ end
 
 local process_index = 1
 function M.next()
+    local current_index = process_index
+    process_index = process_index + 1
     if process_index > #M.processes then
         process_index = 1
     end
-    local process = M.processes[process_index]
+    local process = M.processes[current_index]
     if process.status == "dead" or process.status == "error" then
         process:remove()
     else
         process:update()
     end
-    process_index = process_index + 1
 end
 function M.is_begin()
     return process_index == #M.processes

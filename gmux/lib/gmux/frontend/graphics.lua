@@ -117,7 +117,7 @@ function M.buffer_source(gpu, buffer, once_copy)
     }
 end
 function M.vgpu_source(vgpu, vscreen)
-    return {
+    local source = {
         copy = function(dst_col, dst_row, src_col, src_row, w, h)
             vgpu._copy_to_screen(dst_col, dst_row, src_col, src_row, w, h)
         end,
@@ -132,6 +132,12 @@ function M.vgpu_source(vgpu, vscreen)
             vscreen.pushSignal("screen_resized", w, h)
         end
     }
+    table.insert(vgpu.on_set_resolution, function(w, h)
+        if source.on_set_size then
+            source.on_set_size()
+        end
+    end)
+    return source
 end
 function M.empty_source()
     return {

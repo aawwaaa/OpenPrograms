@@ -37,7 +37,7 @@ function M.loop(update)
             last_yield = computer.uptime()
         end
         if update then update(function() do_break = true end) end
-        xpcall(process.next, function(msg) process.error_handler(0, msg .. "\n" .. debug.traceback()) end)
+        xpcall(process.next, function(msg) process.error_handler(0, debug.traceback) end)
         if process.is_begin() then
             local deltat = computer.uptime() - last_check
             last_check = computer.uptime()
@@ -70,6 +70,8 @@ M.virtual_components = {
     keyboard = require("gmux/backend/virtual_components/keyboard"),
     screen = require("gmux/backend/virtual_components/screen"),
     api = require("gmux/backend/virtual_components/api"),
+    eeprom = require("gmux/backend/virtual_components/eeprom"),
+    filesystem = require("gmux/backend/virtual_components/filesystem"),
 }
 
 return M;

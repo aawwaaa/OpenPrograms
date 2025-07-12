@@ -1,6 +1,9 @@
 local math = require("math")
 local vgpu_callbacks = {}
 return function(options)
+    if options == nil then
+        options = {}
+    end
     local real = options.gpu
     real.setActiveBuffer(0)
     local real_width, real_height = real.getResolution()
@@ -39,7 +42,8 @@ return function(options)
 
     local gpu = {
         type = "gpu",
-        address = "virtual0-gpu0-0000-0000-component000",
+        address = options.address or "virtual0-gpu0-0000-0000-component000",
+        on_set_resolution = {}
     }
     local vscreen = ""
     function gpu.bind(address)
@@ -95,7 +99,9 @@ return function(options)
         height = h
         viewportWidth = width
         viewportHeight = height
-        gpu.pushSignal("screen_resized", w, h)
+        for _, func in ipairs(gpu.on_set_resolution) do
+            func(w, h)
+        end
     end
     function gpu.getViewport()
         return viewportWidth, viewportHeight
@@ -186,7 +192,7 @@ return function(options)
     function gpu._is_dirty()
         return dirty
     end
-    function gpu.remove()
+    function gpu._remove()
         freeBuffer(screenBuffer)
         for _, buffer in ipairs(buffers) do
             freeBuffer(buffer)
@@ -198,7 +204,7 @@ return function(options)
             end
         end
     end
-    function gpu.active()
+    function gpu._active()
         if activeBuffer == nil then return end
         real.setActiveBuffer(activeBuffer)
     end

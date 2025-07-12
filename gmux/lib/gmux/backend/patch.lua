@@ -25,6 +25,11 @@ M.patchs = {
     require("gmux/backend/patchs/93_term"),
 }
 
+M.patchs_blank = {
+    require("gmux/backend/patchs_blank/01_computer"),
+    require("gmux/backend/patchs_blank/03_component"),
+}
+
 M.package_patchs = {
     "computer",
     "event",
@@ -56,7 +61,7 @@ function M.create_patch_instances(options)
             unload = {}
         }
     }
-    for _, patch in ipairs(M.patchs) do
+    for _, patch in ipairs(options.patchs or M.patchs) do
         patch(instances, options)
     end
     return instances
@@ -73,16 +78,33 @@ function M.inject_package_patchs()
         local metatable = {
             __index = function(_, key)
                 if key == "__real" then return real end
-                if process.current_process then
+                if process.current_process and process.current_process.instances[patch] then
                     return process.current_process.instances[patch][key]
                 end
                 return real[key]
             end,
             __newindex = function(_, key, value)
-                if process.current_process then
+                if process.current_process and process.current_process.instances[patch] then
                     process.current_process.instances[patch][key] = value
                 end
                 real[key] = value
+            end,
+            __pairs = function(t)
+                local module = process.current_process and process.current_process.instances[patch] or real
+                local parent = false
+                return function(_, key)
+                    if parent then
+                        return next(module, key)
+                    else
+                        local k, v = next(t, key)
+                        if not k then
+                            parent = true
+                            return next(module)
+                        else
+                            return k, v
+                        end
+                    end
+                end
             end
         }
         setmetatable(real, getmetatable(obj))

@@ -1,7 +1,10 @@
 return function(options)
+    if options == nil then
+        options = {}
+    end
     local screen = {
         type = "screen",
-        address = "virtual0-scre-en00-0000-component000",
+        address = options.address or "virtual0-scre-en00-0000-component000",
     }
     local isOn = true
     function screen.isOn() return isOn end

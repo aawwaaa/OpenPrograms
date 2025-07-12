@@ -4,7 +4,7 @@ for k, v in pairs(require("component")) do
 end
 return function(instances, options)
     local _primaries = {}
-    for k, v in pairs(_component.list()) do
+    for k, v in _component.list() do
         if _component.isPrimary(k) then
             _primaries[k] = v
         end
@@ -60,6 +60,11 @@ return function(instances, options)
 
     function component._handle_component_signal_1(name, source, ...)
         if name == "component_added" and options.components_auto_add then
+            if type(options.components_auto_add) == "function" then
+                if not options.components_auto_add(source) then
+                    return
+                end
+            end
             component._add_component(source)
         end
     end
@@ -95,29 +100,22 @@ return function(instances, options)
     end
     function component.list(filter, exact)
         local output = {}
-        local function filte(c)
+        local output_list = {}
+        local function filte(v)
             if not filter then
                 return true
             end
-            if type(c) ~= "table" then
-                if exact then
-                    return _component.type(c) == filter
-                else
-                    return _component.type(c):match(filter)
-                end
-            end
-            if type(c) == "table" then
-                if exact then
-                    return c.type == filter
-                else
-                    return c.type:match(filter)
-                end
+            if exact then
+                return component.type(v) == filter
+            else
+                return component.type(v):match(filter)
             end
         end
         for k, v in pairs(_component.list()) do
             if component._has_component(k) then
                 if _primaries[k] ~= nil and filte(k) then
-                    table.insert(output, k)
+                    output[k] = component.type(k)
+                    table.insert(output_list, k)
                 end
             end
         end
@@ -125,38 +123,39 @@ return function(instances, options)
             if k == "_index" or type(v) ~= "table" then
                 goto continue
             end
-            for _, v in pairs(output) do
-                if v == k then
-                    goto continue
-                end
-            end
             if not filte(v) then
                 goto continue
             end
-            table.insert(output, k)
+            output[k] = component.type(k)
+            table.insert(output_list, k)
             ::continue::
         end
         for k, v in pairs(components) do
-            if k == "_index" then
+            if k == "_index" or output[k] then
                 goto continue
-            end
-            for _, v in pairs(output) do
-                if v == k then
-                    goto continue
-                end
             end
             if not filte(type(v) == "table" and v or k) then
                 goto continue
             end
-            table.insert(output, k)
+            output[k] = component.type(k)
+            table.insert(output_list, k)
             ::continue::
         end
-        output._index = 0
+
+        local _index = 0
         setmetatable(output, {
             __call = function (t)
-                t._index = t._index + 1
-                if not t[t._index] then return end
-                return t[t._index], component.type(t[t._index])
+                _index = _index + 1
+                if not output_list[_index] then return end
+                return output_list[_index], component.type(output_list[_index])
+            end,
+            __pairs = function (t)
+                local _index = 0
+                return function (t, k)
+                    _index = _index + 1
+                    if not output_list[_index] then return end
+                    return output_list[_index], component.type(output_list[_index])
+                end, t, 0
             end
         })
         return output
@@ -174,16 +173,43 @@ return function(instances, options)
         end
         error("no such component")
     end
+    local function wrap_proxy(proxy)
+        if not proxy or proxy._wrapped then
+            return proxy
+        end
+        proxy._wrapped = true
+        local output = {}
+        for k, v in pairs(proxy) do
+            if type(v) == "function" and k:sub(1, 1) ~= "_" then
+                output[k] = {}
+                setmetatable(output[k], {
+                    __call = function(_, ...)
+                        instances.computer._check_yield()
+                        return v(...)
+                    end,
+                    __tostring = function()
+                        return tostring(v)
+                    end,
+                })
+            else
+                output[k] = v
+            end
+        end
+        return output
+    end
     function component.proxy(address)
         if type(components[address]) ~= "table" then
-            return _component.proxy(address)
+            return wrap_proxy(_component.proxy(address))
         end
         if components[address] then
-            return components[address]
+            return wrap_proxy(components[address])
         end
         error("no such component")
     end
     function component.type(address)
+        if type(address) == "table" then
+            return address.type
+        end
         if type(components[address]) ~= "table" then
             return _component.type(address)
         end

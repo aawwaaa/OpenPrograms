@@ -111,11 +111,12 @@ end
 function M.create_window_buffer(options, func)
     local buffer = graphics.gpu.allocateBuffer(options.width, options.height)
     graphics.gpu.setActiveBuffer(buffer)
-    xpcall(function()
+    local status, error = xpcall(function()
         func(graphics.gpu)
-    end, function(e)
-        M.show_error(string.format("Error in window buffer %s:\n%s", options.title, e) .. "\n" .. debug.traceback())
-    end)
+    end, debug.traceback)
+    if not status then
+        M.show_error(string.format("Error in window buffer %s:\n%s", options.title, error))
+    end
     graphics.gpu.setActiveBuffer(0)
     return M.create_window({
         source = buffer, once_copy = true,
@@ -138,6 +139,12 @@ function M.get_processes()
 end
 function M.get_windows()
     return desktop.windows
+end
+function M.get_backend()
+    return backend
+end
+function M.get_graphics()
+    return graphics
 end
 
 function M.show_error(error)

@@ -152,9 +152,6 @@ function Window:set_position(x, y)
 end
 function Window:set_size(w, h)
     self.source.set_size(w, h - (self.title_bar and 1 or 0))
-    if self.title_bar_block then
-        self:init_title_bar()
-    end
     desktop.copy()
     M.copy()
 end
@@ -257,6 +254,11 @@ function Window:init_block()
             after_copy = self.source.after_copy
         }
     })
+    self.source.on_set_size = function()
+        if self.title_bar_block then
+            self:init_title_bar()
+        end
+    end
     self.body_block.object = self
     self.body_block.type = "body"
 end
@@ -374,11 +376,13 @@ function M.handle_signal(signal, ...)
         return
     end
     local function trigger_event_handler(func, ...)
-        xpcall(function(...)
+        local ok, err = xpcall(function(...)
             func(...)
-        end, function(e)
-            require("frontend/api").show_error("An error occurred in the event handler: \n" .. tostring(e) .. "\n" .. desktop.get_traceback())
-        end, ...)
+        end, debug.traceback, ...)
+        if not ok then
+            local api = require("gmux/frontend/api")
+            api.show_error("An error occurred in the event handler: \n" .. err)
+        end
     end
     if input_events[signal] ~= nil then
         local source = ...

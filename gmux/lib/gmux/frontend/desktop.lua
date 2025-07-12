@@ -3,18 +3,6 @@ local math = require("math")
 
 local M = {}
 
-function M.get_traceback()
-    local traceback = debug.traceback()
-    -- 只获取第一个 (...tail calls...) 之后的内容
-    local tb = traceback
-    local idx = tb:find("%(%.%%.%.tail calls%.%.%.%)")
-    if idx then
-        return tb:sub(idx + #"(...)tail calls...)")
-    else
-        return tb
-    end
-end
-
 local app_icon_width = 9
 local app_icon_height = 5
 local app_icon_width_mono = 3
@@ -269,10 +257,11 @@ function M.touch_event(_, type, mode, _, x, y, modify, _)
     local app = apps[app_index]
     local ok, err = xpcall(function()
         run_app(app, x, y, modify)
-    end, function(e)
+    end, debug.traceback)
+    if not ok then
         local api = require("gmux/frontend/api")
-        api.show_error("Application failed to start: " .. tostring(e) .. "\n" .. M.get_traceback())
-    end)
+        api.show_error("Application failed to start: " .. err)
+    end
 end
 
 return M

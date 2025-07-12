@@ -9,23 +9,7 @@ return function(instances)
     local computer = {}
     
     local metatable = {
-        __index = _computer,
-        __pairs = function(t)
-            local parent = false
-            return function(_, key)
-                if parent then
-                    return next(_computer, key)
-                else
-                    local k, v = next(t, key)
-                    if not k then
-                        parent = true
-                        return next(_computer)
-                    else
-                        return k, v
-                    end
-                end
-            end
-        end
+        __index = _computer
     }
     setmetatable(computer, metatable)
     
@@ -59,6 +43,8 @@ return function(instances)
         end
         local signal = table.remove(signal_queue, 1)
         return table.unpack(signal)
+    end
+    function computer.shutdown()
     end
 
     function computer._use_tmpfs(tmpfs)

@@ -57,9 +57,7 @@ function M.main(be)
     graphics.gpu = component.gpu
     graphics.clear()
     event.register(nil, function(...)
-        local ok, err = xpcall(windows.handle_signal, function(err)
-            return err .. "\n" .. desktop.get_traceback()
-        end, ...)
+        local ok, err = xpcall(windows.handle_signal, debug.traceback, ...)
         if not ok then
             api.show_error(err)
         end
