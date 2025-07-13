@@ -23,6 +23,20 @@ If you have questions or find discrepancies between the documentation and realit
 
 Gmux is a graphical multitasking operating system based on OpenComputers, providing a modern desktop environment and powerful multi-process management capabilities.
 
+## Installation
+
+### Oppm
+
+- `oppm register aawwaaa/OpenPrograms`
+- `oppm install gmux`
+- Enjoy!
+
+### Manual
+
+- Download the `main` branch, extract `gmux/`.
+- Copy `bin/`, `lib/`, `share/` to `/usr`.
+- Enjoy!
+
 ## Features
 
 ### 🖥️ Graphical Interface
