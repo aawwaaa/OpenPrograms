@@ -1,5 +1,5 @@
 local colors_colorful = {
-    background = 0x888888,
+    background = 0x666666,
     background_selected = 0x222222,
     primary_selected = 0x00ffff,
     primary = 0x00ffff,
