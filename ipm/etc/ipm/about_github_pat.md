@@ -1,18 +1,6 @@
-{
-    {
-        type = "repo",
-        id = "url",
-        name = "URL",
+You can use your github PAT like this.
 
-        file_url = "${repo}/${path}",
-        dir_url = "${repo}/${path}/.files.cfg",
-        dir_url_format = {
-            ["<name>"] = {
-                ["type"] = "<is_dir:=dir>",
-            }
-        },
-        dir_url_response = "json"
-    },
+```
     {
         type = "repo",
         id = "github",
@@ -27,5 +15,10 @@
             }
         },
         dir_url_response = "json",
+        headers = {
+            ["Authorization"] = "Bearer <your_pat>",
+        }
     },
-}
+```
+
+Don't forget to `ipm update` after you change the `sources.list.cfg`.

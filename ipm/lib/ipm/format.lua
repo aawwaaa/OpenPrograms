@@ -19,7 +19,8 @@ end
 
 function M.package(package, detailed)
     local output = ""
-    output = output .. package.name .. " [" .. package.id .. "]" .. (package.installed and ", Installed" or "") .. (package.hidden and ", Hidden" or "") .. "\n"
+    output = output .. package.name .. " [" .. package.id .. "]" .. (package.installed and ", Installed" or "") .. (package.hidden and ", Hidden" or "")
+        .. (package.auto_installed and ", Auto Installed" or "") .. (package.auto_installed and not next(package.used) and ", Removeable" or "") .. "\n"
     if package.description then
         output = output .. "  " .. package.description .. "\n"
     end
@@ -31,13 +32,35 @@ function M.package(package, detailed)
         output = output .. "  Repo: " .. package.repo .. "\n"
         if package.dependencies and next(package.dependencies) then
             output = output .. "  Dependencies:\n"
-            for _, dependency in ipairs(package.dependencies) do
-                output = output .. "  - " .. dependency[1] .. "\n"
+            for dependency, path in pairs(package.dependencies) do
+                output = output .. "  - " .. dependency .. " -> " .. path .. "\n"
             end
         end
-        output = output .. "  Files:\n"
-        for src, dst in pairs(package.files) do
-            output = output .. "  - " .. src .. " -> " .. dst .. "\n"
+        if package.used and next(package.used) then
+            output = output .. "  Used:\n"
+            for used, _ in pairs(package.used) do
+                output = output .. "  - " .. used .. "\n"
+            end
+        end
+        if package.install_path then
+            output = output .. "  Install Path: " .. package.install_path .. "\n"
+        end
+        if package.install_dirs and next(package.install_dirs) then
+            output = output .. "  Install Dirs:\n"
+            for _, dir in ipairs(package.install_dirs) do
+                output = output .. "  - " .. dir .. "\n"
+            end
+        end
+        if package.install_files and next(package.install_files) then
+            output = output .. "  Install Files:\n"
+            for _, dir in ipairs(package.install_files) do
+                output = output .. "  - " .. dir .. "\n"
+            end
+        else
+            output = output .. "  Files:\n"
+            for src, dst in pairs(package.files) do
+                output = output .. "  - " .. src .. " -> " .. dst .. "\n"
+            end
         end
     end
     return output
@@ -47,21 +70,19 @@ local execution = {
     execute = function(tab, ...)
         local packed = table.pack(...)
         local last = table.remove(packed, #packed)
-        local output = ""
-        output = output .. tab .. " - " .. table.concat(packed, " ") .. "\n"
         if type(last) == "table" then
-            output = output .. M.execute_data(last, tab .. " ")
+            return tab .. " - " .. table.concat(packed, " ") .. " -> " .. M.execute_data(last, tab .. " ")
         end
+        return tab .. " - " .. table.concat(packed, " ") .. " Failed to generate execute data"
+    end,
+    add_used = function(tab, id, package)
+        local output = ""
+        output = output .. tab .. " - Add used: " .. id .. " <- " .. package .. "\n"
         return output
     end,
-    add_dependency = function(tab, id, package)
+    remove_used = function(tab, id, package)
         local output = ""
-        output = output .. tab .. " - Add dependency: " .. id .. " <- " .. package .. "\n"
-        return output
-    end,
-    remove_dependency = function(tab, id, package)
-        local output = ""
-        output = output .. tab .. " - Remove dependency: " .. id .. " <- " .. package .. "\n"
+        output = output .. tab .. " - Remove used: " .. id .. " <- " .. package .. "\n"
         return output
     end,
     skip = function(tab, src, dst)
@@ -74,31 +95,48 @@ local execution = {
         output = output .. tab .. " - Make directory: " .. dst .. "\n"
         return output
     end,
-    download = function(tab, src, dst)
+    download = function(tab, repo, src, dst)
         local output = ""
-        output = output .. tab .. " - Download: " .. src .. " -> " .. dst .. "\n"
+        output = output .. tab .. " - Download: " .. tostring(src) .. " -> " .. tostring(dst) .. "\n"
         return output
     end,
     rm = function(tab, path)
         local output = ""
-        output = output .. tab .. " - Remove: " .. path .. "\n"
+        output = output .. tab .. " - Remove: " .. tostring(path) .. "\n"
         return output
     end,
     rmdir = function(tab, path)
         local output = ""
-        output = output .. tab .. " - Remove directory: " .. path .. "\n"
+        output = output .. tab .. " - Remove directory: " .. tostring(path) .. "\n"
         return output
     end,
     configure = function(tab, path)
         local output = ""
-        output = output .. tab .. " - Configure: " .. path .. "\n"
+        output = output .. tab .. " - Configure script: " .. tostring(path) .. "\n"
         return output
-    end
+    end,
+    remove = function(tab, path)
+        local output = ""
+        output = output .. tab .. " - Remove script: " .. tostring(path) .. "\n"
+        return output
+    end,
+    register = function(tab, id, path)
+        local output = ""
+        output = output .. tab .. " - Register: " .. id .. " -> " .. path .. "\n"
+        return output
+    end,
+    unregister = function(tab, id)
+        local output = ""
+        output = output .. tab .. " - Unregister: " .. id .. "\n"
+        return output
+    end,
 }
 
 local function execution_line(tab, line)
     local type = table.remove(line, 1)
-    return execution[type](tab, table.unpack(line))
+    local value = execution[type](tab, table.unpack(line))
+    table.insert(line, 1, type)
+    return value
 end
 
 function M.execute_data(data, tab)
@@ -106,7 +144,7 @@ function M.execute_data(data, tab)
         tab = ""
     end
     local output = ""
-    output = output .. tab .. "Execution: " .. data.type .. "\n"
+    output = output .. "Execution: " .. data.type .. "\n"
     if next(data.before) then
         output = output .. tab .. " Before:\n"
         for _, task in ipairs(data.before) do
@@ -116,19 +154,19 @@ function M.execute_data(data, tab)
     if data.repo then
         output = output .. tab .. " Repo: " .. data.repo.repo_str .. "\n"
     end
-    if next(data.run) then
+    if next(data.run or {}) then
         output = output .. tab .. " Run:\n"
         for _, task in ipairs(data.run) do
             output = output .. execution_line(tab, task)
         end
     end
-    if next(data.after) then
+    if next(data.after or {}) then
         output = output .. tab .. " After:\n"
         for _, task in ipairs(data.after) do
             output = output .. execution_line(tab, task)
         end
     end
-    if next(data.errors) then
+    if next(data.errors or {}) then
         output = output .. tab .. " Errors:\n"
         for _, error in ipairs(data.errors) do
             output = output .. tab .. "  - \x1b[31m" .. error .. "\x1b[0m\n"

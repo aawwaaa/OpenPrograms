@@ -34,6 +34,7 @@ function Repo:new(repo)
         dir_url = repo_data.dir_url,
         dir_url_format = repo_data.dir_url_format,
         dir_url_response = repo_data.dir_url_response,
+        headers = repo_data.headers or {},
     }
     setmetatable(obj, self)
     self.__index = self
@@ -45,8 +46,7 @@ function Repo:download(path, target)
         repo = self.repo,
         path = path,
     })
-    io.write("Download: " .. self.repo_str .. "/" .. path .. " -> " .. target .. "\n")
-    ipm.internet.download(url, target)
+    ipm.internet.download(url, target, self.headers)
 end
 
 local function parse_json(string)
@@ -75,8 +75,8 @@ function Repo:list(path, relative)
         repo = self.repo,
         path = path,
     })
-    io.write("List: " .. self.repo_str .. "/" .. path .. " -> %" .. relative .. "\n")
-    local content = ipm.internet.fetch(url)
+    io.write("List: " .. self.repo_str .. "/" .. path .. " -> " .. relative .. "\n")
+    local content = ipm.internet.fetch(url, self.headers)
     local data = parsers[self.dir_url_response](content)
     local parsed = {}
     for k, item in pairs(data) do

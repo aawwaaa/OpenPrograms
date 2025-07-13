@@ -62,6 +62,9 @@ function M.each_file(path, pattern, func, keyfunc, with_name)
 end
 
 function M.save_file(path, data)
+    if not path:match("%.cfg$") then
+        path = path .. ".cfg"
+    end
     local f, err = io.open(path, "w")
     if not f then
         io.stderr:write("Error: " .. path .. " open failed: " .. tostring(err) .. "\n")

@@ -127,14 +127,99 @@ if args[1] == "search" then
 end
 if args[1] == "install" then
     local path = options.path or config.default_install_path
-    local data = ipm.package.prepare_install(package, path)
-    if not options.y and not options.yes then
-        io.write(ipm.format.install_data(data))
-        local answer = io.read()
-        if answer ~= "y" then
+    table.remove(args, 1)
+    for _, id in ipairs(args) do
+        local data = ipm.package.prepare_install(id, path)
+        if ipm.package.has_error(data) then
+            io.stderr:write("Error: execute data has error\n")
             return
         end
+        if not options.y and not options.yes then
+            io.write("Install: " .. id .. "\n")
+            ipm.tui.paged(ipm.format.execute_data(data))
+            io.write("Continue? [y/N]")
+            local answer = io.read()
+            if answer ~= "y" then
+                return
+            end
+        end
+        ipm.package.execute(data)
     end
-    ipm.package.install(data)
+    return
+end
+if args[1] == "upgrade" then
+    table.remove(args, 1)
+    if args[1] == "all" then
+        local packages = ipm.package.package_list_installed()
+        local ids = {}
+        for _, package in ipairs(packages) do
+            table.insert(ids, package.id)
+        end
+        args = ids
+        io.write("Will upgrade: " .. table.concat(args, ", ") .. "\n")
+        if not options.y and not options.yes then
+            io.write("Continue? [y/N]")
+            local answer = io.read()
+            if answer ~= "y" then
+                return
+            end
+        end
+    end
+    for _, id in ipairs(args) do
+        local data = ipm.package.prepare_upgrade(id)
+        if ipm.package.has_error(data) then
+            io.stderr:write("Error: execute data has error\n")
+            return
+        end
+        if not options.y and not options.yes then
+            io.write("Upgrade: " .. id .. "\n")
+            ipm.tui.paged(ipm.format.execute_data(data))
+            io.write("Continue? [y/N]")
+            local answer = io.read()
+            if answer ~= "y" then
+                return
+            end
+        end
+        ipm.package.execute(data)
+    end
+    return
+end
+if args[1] == "remove" then
+    table.remove(args, 1)
+    if args[1] == "auto" then
+        local packages = ipm.package.package_list_installed()
+        local ids = {}
+        for _, package in ipairs(packages) do
+            if not next(package.used) and package.auto_installed then
+                table.insert(ids, package.id)
+            end
+        end
+        args = ids
+        io.write("Will remove: " .. table.concat(args, ", ") .. "\n")
+        if not options.y and not options.yes then
+            io.write("Continue? [y/N]")
+            local answer = io.read()
+            if answer ~= "y" then
+                return
+            end
+        end
+    end
+    for _, id in ipairs(args) do
+        local data = ipm.package.prepare_remove(id)
+        if ipm.package.has_error(data) then
+            io.stderr:write("Error: execute data has error\n")
+            return
+        end
+        if not options.y and not options.yes then
+            io.write("Remove: " .. id .. "\n")
+            ipm.tui.paged(ipm.format.execute_data(data))
+            io.write("Continue? [y/N]")
+            local answer = io.read()
+            if answer ~= "y" then
+                return
+            end
+        end
+        ipm.package.execute(data)
+    end
     return
 end

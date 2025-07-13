@@ -98,6 +98,7 @@ local a_valid_source_list = {
             ["?master/somefolder/something.cfg"] = "/" -- This file will only be installed or updated if it doesn't exist already, unless option -f is specified
         },
 
-        configure = "/config.lua" -- optional, same as files, but for the configure script
+        configure = "/config.lua", -- optional, same as files, but for the configure script
+        remove = "/remove.lua", -- optional, same as files, but for the remove script
     }
 }
