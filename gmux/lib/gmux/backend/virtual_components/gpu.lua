@@ -142,12 +142,24 @@ return function(options)
         return activeBuffer
     end
     function gpu.setActiveBuffer(buffer)
-        if buffer == 0 then
+        local old = gpu.getActiveBuffer()
+        if buffer == 0 or buffer == nil then
             activeBuffer = screenBuffer
         else
-            activeBuffer = buffer 
+            activeBuffer = buffer
         end
-        real.setActiveBuffer(buffer)
+        local found = false
+        for _, i in ipairs(buffers) do
+            if i == activeBuffer then
+                found = true
+                break
+            end
+        end
+        if not found then
+            return old
+        end
+        real.setActiveBuffer(activeBuffer)
+        return old
     end
     function gpu.buffers()
         return buffers
@@ -158,6 +170,9 @@ return function(options)
         return buffer
     end
     function gpu.freeBuffer(buffer)
+        if buffer == 0 then
+            return
+        end
         for i = #buffers, 1, -1 do
             if buffers[i] == buffer then
                 table.remove(buffers, i)

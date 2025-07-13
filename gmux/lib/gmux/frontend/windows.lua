@@ -161,7 +161,7 @@ function Window:init_title_bar()
         graphics.gpu.freeBuffer(self.title_bar_buffer)
     end
     local w, h = self:size()
-    self.title_bar_buffer = graphics.gpu.allocateBuffer(w, 1)
+    self.title_bar_buffer = graphics.gpu.allocateBuffer(math.min(w, graphics.gpu.freeMemory() - 4), 1)
     if self.title_bar_block then
         return
     end
