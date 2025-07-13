@@ -11,6 +11,7 @@ M.set_process = function(p)
 end
 
 M.patchs = {
+    require("gmux/backend/patchs/00_package"),
     require("gmux/backend/patchs/01_computer"),
     require("gmux/backend/patchs/02_event"),
     require("gmux/backend/patchs/03_component"),
@@ -34,6 +35,7 @@ M.package_patchs = {
     "computer",
     "event",
     "component",
+    "package",
     "thread",
     "keyboard",
     "tty",
