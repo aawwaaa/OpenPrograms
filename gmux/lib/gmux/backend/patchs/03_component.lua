@@ -174,28 +174,29 @@ return function(instances, options)
         error("no such component")
     end
     local function wrap_proxy(proxy)
-        if not proxy or proxy._wrapped then
-            return proxy
-        end
-        proxy._wrapped = true
-        local output = {}
-        for k, v in pairs(proxy) do
-            if type(v) == "function" and k:sub(1, 1) ~= "_" then
-                output[k] = {}
-                setmetatable(output[k], {
-                    __call = function(_, ...)
-                        instances.computer._check_yield()
-                        return v(...)
-                    end,
-                    __tostring = function()
-                        return tostring(v)
-                    end,
-                })
-            else
-                output[k] = v
-            end
-        end
-        return output
+        return proxy
+        -- if not proxy or proxy._wrapped then
+        --     return proxy
+        -- end
+        -- proxy._wrapped = true
+        -- local output = {}
+        -- for k, v in pairs(proxy) do
+        --     if type(v) == "function" and k:sub(1, 1) ~= "_" then
+        --         output[k] = {}
+        --         setmetatable(output[k], {
+        --             __call = function(_, ...)
+        --                 instances.computer._check_yield()
+        --                 return v(...)
+        --             end,
+        --             __tostring = function()
+        --                 return tostring(v)
+        --             end,
+        --         })
+        --     else
+        --         output[k] = v
+        --     end
+        -- end
+        -- return output
     end
     function component.proxy(address)
         if type(components[address]) ~= "table" then

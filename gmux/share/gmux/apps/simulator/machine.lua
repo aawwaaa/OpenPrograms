@@ -1,4 +1,6 @@
----@diagnostic disable: undefined-global
+---@diagnostic disable: undefined-global, undefined-field
+local computer = _G.computer
+local component = _G.component
 local gpu = component.list("gpu")()
 local screen = component.list("screen")()
 if gpu and screen then
