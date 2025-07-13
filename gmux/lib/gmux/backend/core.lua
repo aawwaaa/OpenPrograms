@@ -74,4 +74,4 @@ M.virtual_components = {
     filesystem = require("gmux/backend/virtual_components/filesystem"),
 }
 
-return M;
+return M
