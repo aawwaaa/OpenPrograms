@@ -68,26 +68,106 @@ function M.package_info(id)
     return package, installed
 end
 
-function M.install(id)
+function M.prepare_install(id, target)
     if not has_package_file(id) then
         io.stderr:write("Error: package " .. id .. " not found\n")
-        return
+        return {
+            errors = {"Package not found: " .. id}
+        }
     end
     if is_installed(id) then
         io.stderr:write("Error: package " .. id .. " already installed\n")
-        return
+        return {
+            errors = {"Package already installed: " .. id}
+        }
     end
     local package = load_package_file(id)
     if not package then
         io.stderr:write("Error: package " .. id .. " not found\n")
-        return
+        return {
+            errors = {"Package not found: " .. id}
+        }
     end
+    local data = {
+        type = "install",
+        before = {},
+        run = {},
+        after = {}
+    }
+    data.package = package
+    data.errors = {}
+    for dep, path in pairs(package.installs) do
+        if not is_installed(dep) then
+            local dep_data = M.prepare_install(dep, path)
+            table.insert(data.before, {"execute", dep, dep_data})
+            if not dep_data then
+                table.insert(data.errors, "Dependency not satisfied: " .. dep)
+            end
+        else
+            table.insert(data.before, {"add_dependency", dep, id})
+        end
+    end
+    io.write("Prepare install: " .. id .. " -> " .. target .. "\n")
     local repo = ipm.repo.repo(package.repo)
     if not repo then
-        return
+        table.insert(data.errors, "Repo error: " .. package.repo)
+        return data -- error message already printed
     end
+
+    data.repo = repo
     for src, dst in pairs(package.files) do
+        local optional, dir = false, false
+        if src:sub(1, 1) == "?" then
+            optional = true
+            src = src:sub(2)
+        end
+        if src:sub(1, 1) == ":" then
+            dir = true
+            src = src:sub(2)
+        end
+        local real_dst = target .. dst
+        if dst:sub(1, 2) == "//" then
+            real_dst = dst:sub(2)
+        end
+        if not dir then
+            real_dst = real_dst .. "/" .. fs.name(src)
+        end
+        if optional and fs.exists(real_dst) then
+            io.write("Skipping optional file: " .. src .. " -> " .. real_dst .. "\n")
+            table.insert(data.run, {"skip", src, real_dst})
+            goto continue
+        end
+        if dir and not fs.exists(real_dst) then
+            table.insert(data.run, {"mkdir", real_dst})
+        end
+        if not dir then
+            table.insert(data.run, {"download", src, real_dst})
+            goto continue
+        end
+        local results = repo:list(src, real_dst .. "/")
+        local function iter(result, path)
+            for name, real_dst in pairs(result) do
+                if type(real_dst) == "table" then
+                    iter(real_dst, path .. "/" .. name)
+                    goto continue
+                end
+                table.insert(data.run, {"download", path .. "/" .. name, real_dst})
+                ::continue::
+            end
+        end
+        iter(results, src)
+        ::continue::
     end
+
+    if package.configure then
+        table.insert(data.after, {"configure", target .. "/" .. package.configure})
+    end
+    return data
+end
+
+local execution = {}
+
+function M.execute(data)
 end
 
 return M

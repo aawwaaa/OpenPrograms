@@ -1,6 +1,8 @@
 local shell = require("shell")
 local ipm = loadfile("/usr/lib/ipm/init.lua")()
 
+local config = ipm.util.load_file("/etc/ipm/config.cfg")
+
 local internet = ipm.internet.get_internet()
 
 if not internet then
@@ -15,10 +17,10 @@ local function printUsage()
 Improved Package Manager
 Usage:
   Package:
-    ipm list [-i] [id-filter] - List all packages, you can pipe it to `less`.
+    ipm list [-ia] [id-filter] - List all packages, you can pipe it to `less`.
     ipm info <id> - Show information about a package.
     ipm search <filter...> - Search for packages.
-    ipm install <id> - Install a package.
+    ipm install [--path=<path>] <id> - Install a package.
     ipm files <id> - List files in a installed package.
     ipm upgrade <id> - Upgrade a package.
     ipm upgrade all - Upgrade all packages.
@@ -86,7 +88,11 @@ if args[1] == "list" then
         and ipm.package.package_list_installed()
         or ipm.package.package_list()
     for _, package in ipairs(packages) do
+        if package.hidden and not (options.a or options.all) then
+            goto continue
+        end
         io.write(ipm.format.package(package))
+        ::continue::
     end
     return
 end
@@ -107,11 +113,28 @@ if args[1] == "search" then
     local pattern = table.concat(args, " "):lower()
     local replaced_pattern = "\x1b[31m" .. pattern .. "\x1b[0m"
     for _, package in ipairs(ipm.package.package_list()) do
+        if package.hidden and not (options.a or options.all) then
+            goto continue
+        end
         local info = ipm.format.package(package, false):lower()
         local replaced = info:gsub(pattern, replaced_pattern)
         if info ~= replaced then
             io.write(replaced .. "\n")
         end
+        ::continue::
     end
+    return
+end
+if args[1] == "install" then
+    local path = options.path or config.default_install_path
+    local data = ipm.package.prepare_install(package, path)
+    if not options.y and not options.yes then
+        io.write(ipm.format.install_data(data))
+        local answer = io.read()
+        if answer ~= "y" then
+            return
+        end
+    end
+    ipm.package.install(data)
     return
 end
