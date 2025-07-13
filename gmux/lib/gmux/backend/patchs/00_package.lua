@@ -114,7 +114,7 @@ return function(instances)
         return library, module
     end)
 
-    function require(module)
+    function package.require(module)
         checkArg(1, module, "string")
         if loaded[module] ~= nil then
           return loaded[module]

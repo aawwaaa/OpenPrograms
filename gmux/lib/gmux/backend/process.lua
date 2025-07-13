@@ -7,9 +7,21 @@ local M = {}
 M.current_process = nil
 M.processes = {}
 
+local component = require("component")
+local ocelot = component.isAvailable("ocelot") and component.ocelot or nil
+local function ocelot_log(msg)
+    if ocelot then
+        ocelot.log(msg)
+    end
+end
+
 M.error_handler = function(process, error)
+    if type(process) ~= "table" then
+        process = { id = tostring(process) }
+    end
+    ocelot_log("An error occurred in process " .. tostring(process.id) .. ":\n" .. tostring(error))
     io.stderr:write("\n\n\n")
-    io.stderr:write("An error occurred in process " .. process.id .. ":\n")
+    io.stderr:write("An error occurred in process " .. tostring(process.id) .. ":\n")
     io.stderr:write(error)
     io.stderr:flush()
 end
