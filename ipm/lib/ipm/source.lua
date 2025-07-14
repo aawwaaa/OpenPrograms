@@ -187,9 +187,13 @@ function M.clear_data()
     io.write("Clear: " .. data_package_base .. "\n")
     ipm.util.rmdir(data_package_base)
 end
-function M.load_sources()
+function M.load_sources(file)
     load_source(sources_file)
-    ipm.util.each_file(sources_base, "%.cfg$", load_source)
+    if not file then
+        ipm.util.each_file(sources_base, "%.cfg$", load_source)
+    else
+        load_source(sources_base .. "/" .. file .. ".cfg")
+    end
 end
 
 local function save(base, name, data)

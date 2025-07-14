@@ -282,55 +282,88 @@ function M.prepare_upgrade(id)
     return data
 end
 
-local execution = {
+local execution_log = {
     execute = function(...)
         local packed = table.pack(...)
         local last = table.remove(packed, #packed)
         io.write(table.concat(packed, " ") .. " -> Execute: " .. last.type .. "\n")
-        M.execute(last)
     end,
     add_used = function(id, package)
         id = id:lower()
         io.write("Add used: " .. id .. " <- " .. package .. "\n")
+    end,
+    remove_used = function(id, package)
+        id = id:lower()
+        io.write("Remove used: " .. id .. " <- " .. package .. "\n")
+    end,
+    skip = function(src, dst) end,
+    mkdir = function(dst)
+        io.write("Make directory: " .. dst .. "\n")
+    end,
+    download = function(repo, src, dst)
+        io.write("Download: " .. src .. " -> " .. dst .. "\n")
+    end,
+    rm = function(path)
+        io.write("Remove: " .. path .. "\n")
+    end,
+    rmdir = function(path)
+        io.write("Remove directory: " .. path .. "\n")
+    end,
+    configure = function(path)
+        io.write("Configure script: " .. path .. "\n")
+    end,
+    remove = function(path)
+        io.write("Remove script: " .. path .. "\n")
+    end,
+    register = function(id, path, options)
+        id = id:lower()
+        io.write("Register: " .. id .. " -> " .. path .. "\n")
+    end,
+    unregister = function(id)
+        id = id:lower()
+        io.write("Unregister: " .. id .. "\n")
+    end,
+}
+
+local execution = {
+    execute = function(...)
+        local packed = table.pack(...)
+        local last = table.remove(packed, #packed)
+        M.execute(last)
+    end,
+    add_used = function(id, package)
+        id = id:lower()
         local data = load_installed_file(id)
         data.used[package] = true
         save_installed_file(id, data)
     end,
     remove_used = function(id, package)
         id = id:lower()
-        io.write("Remove used: " .. id .. " <- " .. package .. "\n")
         local data = load_installed_file(id)
         data.used[package] = nil
         save_installed_file(id, data)
     end,
     skip = function(src, dst) end,
     mkdir = function(dst)
-        io.write("Make directory: " .. dst .. "\n")
         fs.makeDirectory(dst)
     end,
     download = function(repo, src, dst)
-        io.write("Download: " .. src .. " -> " .. dst .. "\n")
         repo:download(src, dst)
     end,
     rm = function(path)
-        io.write("Remove: " .. path .. "\n")
         fs.remove(path)
     end,
     rmdir = function(path)
-        io.write("Remove directory: " .. path .. "\n")
         ipm.util.rmdir(path)
     end,
     configure = function(path)
-        io.write("Configure script: " .. path .. "\n")
         dofile(path)
     end,
     remove = function(path)
-        io.write("Remove script: " .. path .. "\n")
         dofile(path)
     end,
     register = function(id, path, options)
         id = id:lower()
-        io.write("Register: " .. id .. " -> " .. path .. "\n")
         local data = has_package_file(id) and load_package_file(id) or {
             type = "package",
             id = id,
@@ -344,10 +377,13 @@ local execution = {
     end,
     unregister = function(id)
         id = id:lower()
-        io.write("Unregister: " .. id .. "\n")
         os.remove(data_installed_base .. "/" .. id .. ".cfg")
     end
 }
+
+local function log(type, ...)
+    execution_log[type](...)
+end
 
 local function execute_line(line)
     local type = table.remove(line, 1)
@@ -405,14 +441,17 @@ function M.execute(data)
         ipm.tui.progress(offset_y, "", 0)
     end
     for _, task in ipairs(data.before) do
+        log(table.unpack(task))
         update_progress()
         execute_line(task)
     end
     for _, task in ipairs(data.run) do
+        log(table.unpack(task))
         update_progress()
         execute_line(task)
     end
     for _, task in ipairs(data.after) do
+        log(table.unpack(task))
         update_progress()
         execute_line(task)
     end

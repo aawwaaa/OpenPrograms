@@ -29,7 +29,7 @@ Usage:
     ipm remove <id> - Remove a package.
     ipm remove auto - Remove unused packages.
   Source:
-    ipm update - Update all sources.
+    ipm update [name] - Update all sources, or a specific file.
     ipm clear - Clear cache.
     ipm source list - List all sources.
     ipm source info <id> [type] - Show information about a source.
@@ -218,7 +218,10 @@ local function register(args, options)
     }, math.huge))
     f:close()
     io.write("Written to " .. file .. "\n")
-    io.write("Don't forget `ipm update` after this.\n")
+
+    ipm.source.load_sources(id)
+    ipm.source.resolve_sources()
+    return
 end
 
 if args[1] == "pastebin" then
@@ -237,6 +240,11 @@ if args[1] == "clear" then
     return
 end
 if args[1] == "update" then
+    if args[2] then
+        ipm.source.load_sources(args[2])
+        ipm.source.resolve_sources()
+        return
+    end
     ipm.source.clear_data()
     ipm.source.load_sources()
     ipm.source.resolve_sources()
