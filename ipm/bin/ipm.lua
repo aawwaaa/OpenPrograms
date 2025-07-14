@@ -21,6 +21,7 @@ Usage:
     ipm info <id> - Show information about a package.
     ipm search <filter...> - Search for packages.
     ipm install [--path=<path>] <id> - Install a package.
+    ipm which <file> - Show which package contains a file.
     ipm upgrade <id> - Upgrade a package.
     ipm upgrade all - Upgrade all packages.
     ipm remove <id> - Remove a package.
@@ -103,7 +104,7 @@ if args[1] == "info" then
     end
     if installed then
         io.write("\nPackage installed:\n\n")
-        io.write(ipm.format.package(installed, true))
+        io.write(ipm.format.package(installed, true, true))
     end
     return
 end
@@ -129,13 +130,13 @@ if args[1] == "install" then
     table.remove(args, 1)
     for _, id in ipairs(args) do
         local data = ipm.package.prepare_install(id, path, false, options.f or options.force)
+        io.write("Install: " .. id .. "\n")
+        ipm.tui.paged(ipm.format.execute_data(data))
         if ipm.package.has_error(data) then
             io.stderr:write("Error: execute data has error\n")
             return
         end
         if not options.y and not options.yes then
-            io.write("Install: " .. id .. "\n")
-            ipm.tui.paged(ipm.format.execute_data(data))
             io.write("Continue? [y/N]")
             local answer = io.read()
             if answer ~= "y" then
@@ -145,6 +146,34 @@ if args[1] == "install" then
         ipm.package.execute(data)
     end
     return
+end
+if args[1] == "which" then
+    local lua = shell.resolve(args[2], "lua")
+    local file = lua or shell.resolve(args[2])
+    if not file then
+        io.stderr:write("File not found\n")
+        return
+    end
+    local packages = ipm.package.package_list_installed()
+    for _, package in ipairs(packages) do
+        local result = {}
+        for _, dst in pairs(package.install_files) do
+            if dst:sub(1, #file) == file then
+                table.insert(result, dst)
+            end
+        end
+        for _, dst in pairs(package.install_dirs) do
+            if dst:sub(1, #file) == file then
+                table.insert(result, dst)
+            end
+        end
+        if #result > 0 then
+            io.write(package.id .. ":\n")
+            for _, r in ipairs(result) do
+                io.write("  " .. r .. "\n")
+            end
+        end
+    end
 end
 if args[1] == "upgrade" then
     table.remove(args, 1)
@@ -166,13 +195,13 @@ if args[1] == "upgrade" then
     end
     for _, id in ipairs(args) do
         local data = ipm.package.prepare_upgrade(id)
+        io.write("Upgrade: " .. id .. "\n")
+        ipm.tui.paged(ipm.format.execute_data(data))
         if ipm.package.has_error(data) then
             io.stderr:write("Error: execute data has error\n")
             return
         end
         if not options.y and not options.yes then
-            io.write("Upgrade: " .. id .. "\n")
-            ipm.tui.paged(ipm.format.execute_data(data))
             io.write("Continue? [y/N]")
             local answer = io.read()
             if answer ~= "y" then
@@ -205,13 +234,13 @@ if args[1] == "remove" then
     end
     for _, id in ipairs(args) do
         local data = ipm.package.prepare_remove(id)
+        io.write("Remove: " .. id .. "\n")
+        ipm.tui.paged(ipm.format.execute_data(data))
         if ipm.package.has_error(data) then
             io.stderr:write("Error: execute data has error\n")
             return
         end
         if not options.y and not options.yes then
-            io.write("Remove: " .. id .. "\n")
-            ipm.tui.paged(ipm.format.execute_data(data))
             io.write("Continue? [y/N]")
             local answer = io.read()
             if answer ~= "y" then

@@ -21,54 +21,65 @@ local loaded = {}
 
 local source_inc_id = 1
 
-local function load_source_data(data, priority, recursive, source_str, source_repo)
-    if recursive == nil or recursive < 0 then
-        recursive = 0
-    end
-    if priority == nil then
-        priority = 0
-    end
+local function load_oppm_source_data(data, source_data)
+    local recursive = source_data.recursive
+    local priority = source_data.priority
+    local source_str = source_data.source_str
+    local source_repo = source_data.source.source_repo or nil
+
     local output = {}
     for key, source in pairs(data) do
-        source.source = source_str or nil
-        if type(key) == "string" then
-            if source.programs then
-                package_sources[key] = {
-                    type = "packages",
-                    id = tostring(source_inc_id),
-                    name = key,
-                    data = source.programs,
-                    priority = priority,
-                    recursive = recursive - 1,
-                }
-                source_inc_id = source_inc_id + 1
-                table.insert(loading, package_sources[key])
-                table.insert(output, { "programs", key })
-            elseif source.name then
-                source.type = "package"
-                source.id = key
-                source.repo = source_repo or source.repo or "unknown"
-                table.insert(loading, source)
-                table.insert(output, { "package", key })
-            elseif source.repo then
-                package_sources[key] = {
-                    type = "packages",
-                    id = tostring(source_inc_id),
-                    name = key,
-                    url = "https://raw.githubusercontent.com/" .. source.repo .. "/master/programs.cfg",
-                    repo = "github:" .. source.repo,
-                    priority = priority,
-                    recursive = recursive - 1,
-                }
-                source_inc_id = source_inc_id + 1
-                table.insert(loading, package_sources[key])
-                table.insert(output, { "packages", key })
-            end
-            goto continue
+        source.source = source_str
+        if source_repo then
+            source.type = "package"
+            source.id = key
+            source.repo = source_repo or source.repo or "unknown"
+            table.insert(loading, source)
+            table.insert(output, { "package", key })
+        elseif source.programs then
+            package_sources[key] = {
+                type = "packages",
+                id = tostring(source_inc_id),
+                name = key,
+                data = source.programs,
+                priority = priority,
+                recursive = recursive - 1,
+                source = source_str,
+                source_repo = "unknown",
+            }
+            source_inc_id = source_inc_id + 1
+            table.insert(loading, package_sources[key])
+            table.insert(output, { "programs", key })
+        elseif source.repo then
+            package_sources[key] = {
+                type = "packages",
+                id = tostring(source_inc_id),
+                name = key,
+                url = "https://raw.githubusercontent.com/" .. source.repo .. "/master/programs.cfg",
+                source_repo = "github:" .. source.repo,
+                priority = priority,
+                recursive = recursive - 1,
+                source = source_str,
+            }
+            source_inc_id = source_inc_id + 1
+            table.insert(loading, package_sources[key])
+            table.insert(output, { "packages", key })
         end
+    end
+    return output
+end
+
+local function load_ipm_source_data(data, source_data)
+    local recursive = source_data.recursive
+    local priority = source_data.priority
+    local source_str = source_data.source_str
+
+    local output = {}
+    for key, source in pairs(data) do
         if source.enabled == false then
             goto continue
         end
+        source.source = source_str
         if recursive >= 2 and source.type == "repos" then
             source.priority = source.priority or priority
             source.recursive = source.recursive == nil and (recursive - 1)
@@ -76,7 +87,7 @@ local function load_source_data(data, priority, recursive, source_str, source_re
                     or (source.recursive == false and 1
                     or source.recursive)
                 )
-            table.insert(output, { "repo", source.id })
+            table.insert(output, { "repos", source.id })
             table.insert(loading, source)
         elseif source.type == "repo" then
             table.insert(output, { "repo", source.id })
@@ -89,6 +100,7 @@ local function load_source_data(data, priority, recursive, source_str, source_re
                     or source.recursive)
                 )
             package_sources[source.id] = source
+            table.insert(output, { "packages", source.id })
             table.insert(loading, source)
         elseif source.type == "package" then
             if source.priority == nil then
@@ -102,10 +114,69 @@ local function load_source_data(data, priority, recursive, source_str, source_re
     return output
 end
 
+local function load_hel_source_data(data, source_data)
+    local output = source_data.data or {}
+    source_data.data = nil
+    local n = data.offset + data.sent
+    local cont = data.offset < data.total
+    source_data.source.offset = n
+    source_data.source.url = source_data.source.url:gsub("(%?offset=%d+)?", "") .. "?offset=" .. n
+    for _, package in ipairs(data.list) do
+        local id = package.name
+        local latest = package.versions[next(package.versions)]
+        local files = {}
+        for src, obj in pairs(latest.files) do
+            files[src] = "/" .. obj.path .. "!"
+        end
+        local dependencies = {}
+        for id, obj in pairs(latest.depends) do
+            dependencies[(obj.type == "optional" and "?" or "") .. id] = "/"
+        end
+        local object = {
+            type = "package",
+            id = id,
+            name = id,
+            description = package.short_description,
+            note = package.description,
+            repo = "url:",
+            priority = source_data.priority,
+            recursive = source_data.recursive - 1,
+            source = source_data.source_str,
+            authors = table.concat(package.authors, "\n"),
+
+            files = files,
+            dependencies = dependencies
+        }
+        table.insert(output, { "package", id })
+        table.insert(loading, object)
+    end
+    if cont then
+        table.insert(loading, source_data.source)
+    end
+    return output
+end
+
+local function load_source_data(data, source_data)
+    source_data.recursive = source_data.recursive or 0
+    source_data.priority = source_data.priority or 0
+    source_data.source_str = source_data.source_str or "unknown"
+    if data.data then
+        return load_hel_source_data(data.data, source_data)
+    end
+    if type(next(data)) == "string" then
+        return load_oppm_source_data(data, source_data)
+    end
+    return load_ipm_source_data(data, source_data)
+end
+
 local function load_source(path)
     io.write("Load: " .. path .. "\n")
     local data = ipm.util.load_file(path)
-    load_source_data(data, 0, 2, path)
+    load_source_data(data, {
+        priority = 0,
+        recursive = 2,
+        source_str = path,
+    })
 end
 
 
@@ -129,6 +200,11 @@ end
 local function resolve_repo(source)
     save(data_repo_base, source.id, source)
 end
+
+local parsers = {
+    json = ipm.json.decode,
+    cfg = serialization.unserialize,
+}
 local function resolve_repos(source)
     if source.url then
         io.write("Fetch: " .. source.type .. " " .. source.id .. ": " .. source.url .. "\n")
@@ -137,7 +213,7 @@ local function resolve_repos(source)
             io.stderr:write("Error: " .. source.type .. " " .. source.id .. " fetch failed\n")
             return
         end
-        local data, err = serialization.unserialize(data)
+        local data, err = parsers[source.url_response or "cfg"](data)
         if not data then
             io.stderr:write("Error: " .. source.type .. " " .. source.id .. " parse failed: " .. tostring(err) .. "\n")
             return
@@ -150,9 +226,12 @@ local function resolve_repos(source)
         io.stderr:write("Error: " .. source.type .. " " .. source.id .. " no data\n")
         return
     end
-    source.data = load_source_data(source.data, source.priority or 0,
-        source.recursive or (source.type == "repos" and 1 or 0), (source.name or "") .. " [" .. source.id .. "| " .. source.type .. "]",
-        source.repo)
+    source.data = load_source_data(source.data, {
+        priority = source.priority or 0,
+        recursive = source.recursive or (source.type == "repos" and 1 or 0),
+        source_str = (source.name or "") .. " [" .. source.id .. "| " .. source.type .. "]",
+        source = source,
+    })
     save(data_source_base, source.type .. "--" .. source.id, source)
 end
 local function resolve_package(source)

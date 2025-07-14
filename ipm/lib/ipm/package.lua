@@ -107,8 +107,15 @@ function M.prepare_install(id, target, auto_installed, force)
         else
             path = fs.canonical(target .. "/" .. path:gsub("^/", ""))
         end
-        dep = dep:lower()
+        local optional = dep:sub(1, 1) == "?"
+        dep = dep:lower():gsub("^%?", "")
         if not is_installed(dep) then
+            if optional then
+                io.write("Install optional dependency: " .. dep .. " -> " .. path .. "? [y/N] ")
+                if io.read("*l"):lower() ~= "y" then
+                    goto continue
+                end
+            end
             local dep_data = M.prepare_install(dep, path, true, force)
             table.insert(data.before, {"execute", dep, dep_data})
             if not dep_data then
@@ -116,6 +123,7 @@ function M.prepare_install(id, target, auto_installed, force)
             end
         end
         table.insert(data.before, {"add_used", dep, id})
+        ::continue::
     end
     io.write("Prepare install: " .. id .. " -> " .. target .. "\n")
     local repo = ipm.repo.repo(package.repo)
@@ -142,7 +150,9 @@ function M.prepare_install(id, target, auto_installed, force)
         if dst:sub(1, 2) == "//" then
             real_dst = dst:sub(2)
         end
-        if not dir then
+        if real_dst:sub(-1) == "!" then
+            real_dst = real_dst:sub(1, -2)
+        elseif not dir then
             real_dst = real_dst .. "/" .. fs.name(src)
         end
         real_dst = fs.canonical(real_dst)
@@ -235,6 +245,7 @@ function M.prepare_remove(id)
     end
 
     for dep, path in pairs(installed.dependencies or {}) do
+        dep = dep:lower():gsub("^%?", "")
         table.insert(data.before, {"remove_used", dep, id})
     end
 

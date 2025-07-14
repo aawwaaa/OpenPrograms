@@ -28,8 +28,10 @@ function M.text(offset_y, text)
     local x, y = tty.getCursor()
 
     while y >= h + offset_y do
-        term.setCursor(1, h + offset_y)
-        term.clearLine()
+        if y == h + offset_y then
+            term.setCursor(1, h + offset_y)
+            term.clearLine()
+        end
         term.scroll(1)
         y = y - 1
     end

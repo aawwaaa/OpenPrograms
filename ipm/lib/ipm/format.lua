@@ -17,19 +17,24 @@ function M.source(source, detailed)
     return output
 end
 
-function M.package(package, detailed)
+function M.package(package, detailed, locals)
     local output = ""
-    output = output .. package.name .. " [" .. package.id .. "]" .. (package.installed and ", Installed" or "") .. (package.hidden and ", Hidden" or "")
+    output = output .. tostring(package.name) .. " [" .. tostring(package.id) .. "]" .. (package.installed and ", Installed" or "") .. (package.hidden and ", Hidden" or "")
         .. (package.auto_installed and ", Auto Installed" or "") .. (package.auto_installed and not next(package.used) and ", Removeable" or "") .. "\n"
     if package.description then
         output = output .. "  " .. package.description .. "\n"
     end
     if detailed then
-        output = output .. "  Source: " .. package.source .. "\n"
-        if package.authors then
-            output = output .. "  Authors: " .. package.authors .. "\n"
+        if package.note and not locals then
+            output = output .. "  Note: \n" .. package.note .. "\n"
         end
-        output = output .. "  Repo: " .. package.repo .. "\n"
+        output = output .. "  Source: " .. package.source .. "\n"
+        if not locals then
+            if package.authors then
+                output = output .. "  Authors: " .. package.authors .. "\n"
+            end
+            output = output .. "  Repo: " .. package.repo .. "\n"
+        end
         if package.dependencies and next(package.dependencies) then
             output = output .. "  Dependencies:\n"
             for dependency, path in pairs(package.dependencies) do

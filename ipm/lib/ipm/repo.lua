@@ -49,20 +49,8 @@ function Repo:download(path, target)
     ipm.internet.download(url, target, self.headers)
 end
 
-local function parse_json(string)
-    local array = {}
-    for match in string:gmatch("(%b{})") do
-        local kvs = {}
-        for key, value in match:gmatch('([^"]+)":%s*"([^"]*)"') do
-            kvs[key] = value
-        end
-        table.insert(array, kvs)
-    end
-    return array
-end
-
 local parsers = {
-    json = parse_json,
+    json = ipm.json.decode,
     cfg = serialization.unserialize
 }
 
