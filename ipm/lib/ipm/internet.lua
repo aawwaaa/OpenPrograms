@@ -40,10 +40,15 @@ function M.fetch(url, headers)
     local first = true
     local ok, err = pcall(function()
         for chunk in handle do
-            if first then
+            local code, message, headers = con.response()
+            if first and headers then
                 first = false
-                local code, message, headers = con.response()
-                content_length = headers and tonumber(headers["Content-Length"][1] or headers["content-length"][1]) or nil
+                content_length = headers and headers["Content-Length"]
+                    and tonumber(headers["Content-Length"][1]) or nil
+                if code ~= 200 then
+                    io.stderr:write("Failed to fetch " .. url .. " (" .. code .. " " .. message .. ")\n")
+                    return nil
+                end
                 ipm.tui.text(-4, "Fetching " .. url)
                 ipm.tui.progress(-3, "", 0)
             end
@@ -54,6 +59,7 @@ function M.fetch(url, headers)
     ipm.tui.text(-4, "")
     ipm.tui.text(-3, "")
     if not ok then
+        io.stderr:write("Failed to fetch " .. url .. " (" .. err .. ")\n")
         return nil
     end
     return content
@@ -80,9 +86,14 @@ function M.download(url, path, headers)
     local first = true
     local ok, err = pcall(function()
         for chunk in handle do
-            if first then
-                local code, message, headers = con.response()
-                content_length = headers and tonumber(headers["Content-Length"][1] or headers["content-length"][1]) or nil
+            local code, message, headers = con.response()
+            if first and headers then
+                content_length = headers and headers["Content-Length"]
+                    and tonumber(headers["Content-Length"][1]) or nil
+                if code ~= 200 then
+                    io.stderr:write("Failed to fetch " .. url .. " (" .. code .. " " .. message .. ")\n")
+                    return nil
+                end
                 ipm.tui.text(-5, "Downloading " .. url)
                 ipm.tui.text(-4, " -> " .. path)
                 ipm.tui.progress(-3, "", 0)
@@ -94,7 +105,7 @@ function M.download(url, path, headers)
         end
     end)
     if not ok then
-        file:close()
+        io.stderr:write("Failed to download " .. url .. " (" .. err .. ")\n")
         os.remove(path)
         return nil
     end

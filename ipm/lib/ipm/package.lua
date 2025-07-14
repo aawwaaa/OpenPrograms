@@ -331,7 +331,10 @@ local execution = {
     register = function(id, path, options)
         id = id:lower()
         io.write("Register: " .. id .. " -> " .. path .. "\n")
-        local data = load_package_file(id)
+        local data = has_package_file(id) and load_package_file(id) or {
+            type = "package",
+            id = id,
+        }
         data.used = {}
         data.install_path = path
         for k, v in pairs(options) do

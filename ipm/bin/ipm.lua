@@ -31,6 +31,8 @@ Usage:
     ipm clear - Clear cache.
     ipm source list - List all sources.
     ipm source info <id> [type] - Show information about a source.
+  Install from others:
+    ipm pastebin <id> <filename> - Download a file as package from pastebin.
 ]])
 end
 
@@ -65,6 +67,58 @@ local function source(args, options)
         end
         return
     end
+end
+
+local function pastebin(args, options)
+    if #args == 0 then
+        printUsage()
+        return
+    end
+    local id = args[1]
+    local filename = args[2]
+
+    local path = config.default_install_path
+
+    local repo = ipm.repo.repo("pastebin:")
+    local execution = {
+        type = "install",
+        before = {},
+        repo = repo,
+        run = {
+            {"download", repo, id, path .. "/bin/" .. filename .. ".lua"},
+        },
+        after = {
+            {"register", filename, path, {
+                name = filename,
+                description = "Downloaded from pastebin",
+                source = "pastebin:" .. id,
+                auto_installed = false,
+                install_files = {path .. "/bin/" .. filename .. ".lua"},
+                install_dirs = {},
+            }}
+        }
+    }
+
+    io.write("Install: " .. filename .. "\n")
+    ipm.tui.paged(ipm.format.execute_data(execution))
+    if ipm.package.has_error(execution) then
+        io.stderr:write("Error: execute data has error\n")
+        return
+    end
+    if not options.y and not options.yes then
+        io.write("Continue? [y/N]")
+        local answer = io.read()
+        if answer ~= "y" then
+            return
+        end
+    end
+    ipm.package.execute(execution)
+end
+
+if args[1] == "pastebin" then
+    table.remove(args, 1)
+    pastebin(args, options)
+    return
 end
 
 if args[1] == "clear" then
