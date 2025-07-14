@@ -43,7 +43,6 @@ local function download(file, dst)
         f:write(chunk)
     end
     f:close()
-    con:close()
 end
 
 io.write("Improved Package Manager Installer\n")
