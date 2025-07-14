@@ -3,18 +3,18 @@ local serialization = require("serialization")
 
 local ipm = ...
 
+local M = {}
+
 local sources_file = "/etc/ipm/sources.list.cfg"
+M.source_file = sources_file
 local sources_base = "/etc/ipm/sources.list.d"
+M.source_base = sources_base
 
 local data_source_base = "/usr/share/ipm/source"
 local data_repo_base = ipm.repo.data_repo_base
 local data_package_base = ipm.package.data_package_base
 
 ipm.util.mkdirp(data_source_base)
-
-local M = {}
-
-local package_sources = {}
 
 local loading = {}
 local loaded = {}
@@ -30,14 +30,14 @@ local function load_oppm_source_data(data, source_data)
     local output = {}
     for key, source in pairs(data) do
         source.source = source_str
-        if source_repo then
+        if source_repo or source.files then
             source.type = "package"
             source.id = key
             source.repo = source_repo or source.repo or "unknown"
             table.insert(loading, source)
             table.insert(output, { "package", key })
         elseif source.programs then
-            package_sources[key] = {
+            local package_source = {
                 type = "packages",
                 id = tostring(source_inc_id),
                 name = key,
@@ -48,10 +48,10 @@ local function load_oppm_source_data(data, source_data)
                 source_repo = "unknown",
             }
             source_inc_id = source_inc_id + 1
-            table.insert(loading, package_sources[key])
+            table.insert(loading, package_source)
             table.insert(output, { "programs", key })
         elseif source.repo then
-            package_sources[key] = {
+            local package_source = {
                 type = "packages",
                 id = tostring(source_inc_id),
                 name = key,
@@ -62,7 +62,7 @@ local function load_oppm_source_data(data, source_data)
                 source = source_str,
             }
             source_inc_id = source_inc_id + 1
-            table.insert(loading, package_sources[key])
+            table.insert(loading, package_source)
             table.insert(output, { "packages", key })
         end
     end
@@ -99,7 +99,6 @@ local function load_ipm_source_data(data, source_data)
                     or (source.recursive == false and 0
                     or source.recursive)
                 )
-            package_sources[source.id] = source
             table.insert(output, { "packages", source.id })
             table.insert(loading, source)
         elseif source.type == "package" then

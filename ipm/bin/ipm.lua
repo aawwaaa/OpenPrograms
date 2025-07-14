@@ -1,5 +1,7 @@
 local shell = require("shell")
-local ipm = loadfile("/usr/lib/ipm/init.lua")()
+local serialization = require("serialization")
+local fs = require("filesystem")
+local ipm = require("ipm")
 
 local config = ipm.util.load_file("/etc/ipm/config.cfg")
 
@@ -31,8 +33,13 @@ Usage:
     ipm clear - Clear cache.
     ipm source list - List all sources.
     ipm source info <id> [type] - Show information about a source.
+    ipm source files - list source config files.
+    ipm source add <name> [template:repos|<packages>] - Add a source config file.
+    ipm source edit [name] - Edit a source config file.
+    ipm source remove <name> - Remove a source config file.
   Install from others:
     ipm pastebin <id> <filename> - Download a file as package from pastebin.
+    ipm register <user>/<repo> [id] - Register a repository. Don't forget `ipm update` after this.
 ]])
 end
 
@@ -40,6 +47,31 @@ if #args == 0 or options.h or options.help then
     printUsage()
     return
 end
+
+local templates = {
+    repos = {
+        {
+            type = "repos",
+            id = "repos_id",
+            name = "repos_name",
+            description = "repos list",
+            url = "url_to_repos",
+            priority = 0,
+            enabled = true,
+        },
+    },
+    packages = {
+        {
+            type = "packages",
+            id = "packages_id",
+            name = "packages_name",
+            description = "packages list",
+            url = "url_to_programs",
+            priority = 0,
+            enabled = true,
+        }
+    }
+}
 
 local function source(args, options)
     if #args == 0 then
@@ -65,6 +97,51 @@ local function source(args, options)
         else
             io.stderr:write("Source not found\n")
         end
+        return
+    end
+    if args[1] == "files" then
+        local list = ipm.util.each_file(ipm.source.source_base, "%.cfg$", function(file)
+            return file:gsub("%.cfg$", "")
+        end, nil, true)
+        for _, file in pairs(list) do
+            io.write("  " .. file .. "\n")
+        end
+        return
+    end
+    if args[1] == "add" then
+        local file = ipm.source.source_base .. "/" .. args[2] .. ".cfg"
+        if not templates[args[3] or "packages"] then
+            io.stderr:write("Invalid template: " .. (args[3] or "packages") .. "\n")
+            return
+        end
+        local f = io.open(file, "w")
+        if not f then
+            io.stderr:write("Failed to open file: " .. file .. "\n")
+            return
+        end
+        f:write(serialization.serialize(templates[args[3] or "packages"], math.huge))
+        f:close()
+        local edit = loadfile("/bin/edit.lua")
+        edit(file)
+    end
+    if args[1] == "edit" then
+        local file = args[2] and ipm.source.source_base .. "/" .. args[2] .. ".cfg" or ipm.source.source_file
+        local edit = loadfile("/bin/edit.lua")
+        if not edit then
+            io.stderr:write("Failed to load edit.lua, please install it first\n")
+            return
+        end
+        edit(file)
+        return
+    end
+    if args[1] == "remove" then
+        local file = ipm.source.source_base .. "/" .. args[2] .. ".cfg"
+        if not fs.exists(file) then
+            io.stderr:write("Source config file not found\n")
+            return
+        end
+        fs.remove(file)
+        io.write("Removed " .. file .. "\n")
         return
     end
 end
@@ -114,10 +191,44 @@ local function pastebin(args, options)
     end
     ipm.package.execute(execution)
 end
+local function register(args, options)
+    if #args == 0 then
+        printUsage()
+        return
+    end
+    local user, repo = args[1]:match("^(.+)/(.+)$")
+    local id = args[2] or user .. "-" .. repo
+    local file = ipm.source.source_base .. "/" .. id .. ".cfg"
+    local f = io.open(file, "w")
+    if not f then
+        io.stderr:write("Failed to open file: " .. file .. "\n")
+        return
+    end
+    f:write(serialization.serialize({
+        {
+            type = "packages",
+            id = id,
+            name = user .. "/" .. repo,
+            description = "Packages from " .. user .. "/" .. repo,
+            url = "https://raw.githubusercontent.com/" .. user .. "/" .. repo .. "/refs/heads/master/programs.cfg",
+            priority = 1,
+            enabled = true,
+            source_repo = "github:" .. user .. "/" .. repo,
+        }
+    }, math.huge))
+    f:close()
+    io.write("Written to " .. file .. "\n")
+    io.write("Don't forget `ipm update` after this.\n")
+end
 
 if args[1] == "pastebin" then
     table.remove(args, 1)
     pastebin(args, options)
+    return
+end
+if args[1] == "register" then
+    table.remove(args, 1)
+    register(args, options)
     return
 end
 
