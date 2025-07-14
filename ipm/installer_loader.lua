@@ -26,4 +26,6 @@ if not func then
     return
 end
 
+io.write("Running installer...\n")
+
 func()
