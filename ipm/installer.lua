@@ -1,4 +1,11 @@
 local repo = "https://raw.githubusercontent.com/aawwaaa/OpenPrograms/refs/heads/main/ipm"
+local mirror_repo = "https://ghfast.top/raw.githubusercontent.com/aawwaaa/OpenPrograms/refs/heads/main/ipm"
+local mirror_config = [[{
+    default_install_path = "/usr",
+    redirects = {
+        ["raw.githubusercontent.com"] = "ghfast.top/raw.githubusercontent.com"
+    }
+}]]
 
 local files = {
     "/bin/ipm.lua",
@@ -7,7 +14,6 @@ local files = {
     "/etc/ipm/sources.list.d/aawwaaa.cfg",
     "/lib/ipm/format.lua",
     "/lib/ipm/internet.lua",
-    "/lib/ipm/installer.lua",
     "/lib/ipm/json.lua",
     "/lib/ipm/package.lua",
     "/lib/ipm/repo.lua",
@@ -46,11 +52,15 @@ local function download(file, dst)
 end
 
 io.write("Improved Package Manager Installer\n")
-io.write("Continue? [y/N]")
+io.write("Continue? [y/N/use_mirror]")
 local answer = io.read()
-if answer ~= "y" then
+if answer ~= "y" and answer ~= "use_mirror" then
     io.write("Aborting...\n")
     return
+end
+if answer == "use_mirror" then
+    io.write("Using mirror...\n")
+    repo = mirror_repo
 end
 io.write("Downloading files...\n")
 for _, file in ipairs(files) do
@@ -60,6 +70,14 @@ end
 
 local ipm = loadfile("/usr/bin/ipm.lua")
 
+if answer == "use_mirror" then
+    local config = io.open("/etc/ipm/config.cfg", "w")
+    if config then
+        config:write(mirror_config)
+        config:close()
+    end
+end
+
 if ipm then
     io.write("Update cache...\n")
     ipm("update")
@@ -68,6 +86,14 @@ if ipm then
 else
     io.stderr:write("Failed to load ipm.lua\n")
     return
+end
+
+if answer == "use_mirror" then
+    local config = io.open("/etc/ipm/config.cfg", "w")
+    if config then
+        config:write(mirror_config)
+        config:close()
+    end
 end
 
 io.write("Update cache...\n")
