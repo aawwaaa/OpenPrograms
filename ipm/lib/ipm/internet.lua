@@ -34,13 +34,19 @@ function M.fetch(url, headers)
         io.stderr:write("Failed to connect to " .. url .. "\n")
         return nil
     end
-    local code, message, headers = getmetatable(handle).__index.response()
-    local content_length = headers and headers["Content-Length"] or nil
-    ipm.tui.text(-4, "Fetching " .. url)
-    ipm.tui.progress(-3, "", 0)
+    local con = getmetatable(handle).__index
+    local content_length = nil
     local content = ""
+    local first = true
     local ok, err = pcall(function()
         for chunk in handle do
+            if first then
+                first = false
+                local code, message, headers = con.response()
+                content_length = headers and tonumber(headers["Content-Length"][1] or headers["content-length"][1]) or nil
+                ipm.tui.text(-4, "Fetching " .. url)
+                ipm.tui.progress(-3, "", 0)
+            end
             content = content .. chunk
             ipm.tui.progress(-3, "", #content / (content_length or #content*1.5))
         end
@@ -67,17 +73,30 @@ function M.download(url, path, headers)
         io.stderr:write("Failed to connect to " .. url .. "\n")
         return nil
     end
-    local code, message, headers = getmetatable(handle).__index.response()
-    local content_length = headers and headers["Content-Length"] or nil
+    local con = getmetatable(handle).__index
+    local content_length = nil
     local length = 0
-    ipm.tui.text(-5, "Downloading " .. url)
-    ipm.tui.text(-4, " -> " .. path)
-    ipm.tui.progress(-3, "", 0)
 
-    for chunk in handle do
-        file:write(chunk)
-        length = length + #chunk
-        ipm.tui.progress(-3, "", length / (content_length or length*1.5))
+    local first = true
+    local ok, err = pcall(function()
+        for chunk in handle do
+            if first then
+                local code, message, headers = con.response()
+                content_length = headers and tonumber(headers["Content-Length"][1] or headers["content-length"][1]) or nil
+                ipm.tui.text(-5, "Downloading " .. url)
+                ipm.tui.text(-4, " -> " .. path)
+                ipm.tui.progress(-3, "", 0)
+                first = false
+            end
+            file:write(chunk)
+            length = length + #chunk
+            ipm.tui.progress(-3, "", length / (content_length or length*1.5))
+        end
+    end)
+    if not ok then
+        file:close()
+        os.remove(path)
+        return nil
     end
     ipm.tui.text(-5, "")
     ipm.tui.text(-4, "")

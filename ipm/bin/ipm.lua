@@ -128,7 +128,7 @@ if args[1] == "install" then
     local path = options.path or config.default_install_path
     table.remove(args, 1)
     for _, id in ipairs(args) do
-        local data = ipm.package.prepare_install(id, path)
+        local data = ipm.package.prepare_install(id, path, false, options.f or options.force)
         if ipm.package.has_error(data) then
             io.stderr:write("Error: execute data has error\n")
             return

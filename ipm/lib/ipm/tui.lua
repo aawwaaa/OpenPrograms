@@ -27,7 +27,7 @@ function M.text(offset_y, text)
     local w, h = tty.getViewport()
     local x, y = tty.getCursor()
 
-    while y >= h + offset_y - 1 do
+    while y >= h + offset_y do
         term.setCursor(1, h + offset_y)
         term.clearLine()
         term.scroll(1)

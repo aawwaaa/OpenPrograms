@@ -378,6 +378,9 @@ function M.execute(data)
         end
         current_line = current_line + 1
         ipm.tui.progress(offset_y, "", current_line / total_lines)
+        for i=-2, offset_y-1, 1 do
+            ipm.tui.text(i, "")
+        end
     end
     if offset_y > -3 then
         ipm.tui.progress(offset_y, "", 0)
