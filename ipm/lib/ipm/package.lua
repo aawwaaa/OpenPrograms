@@ -102,6 +102,11 @@ function M.prepare_install(id, target, auto_installed, force)
     data.package = package
     data.errors = {}
     for dep, path in pairs(package.dependencies or {}) do
+        if path:sub(1, 2) == "//" then
+            path = path:sub(2)
+        else
+            path = fs.canonical(target .. "/" .. path:gsub("^/", ""))
+        end
         dep = dep:lower()
         if not is_installed(dep) then
             local dep_data = M.prepare_install(dep, path, true, force)
