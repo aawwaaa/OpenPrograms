@@ -432,6 +432,7 @@ function M.execute(data)
             return
         end
         current_line = current_line + 1
+        ipm.tui.text(-5, "")
         ipm.tui.progress(offset_y, "", current_line / total_lines)
         for i=-2, offset_y-1, 1 do
             ipm.tui.text(i, "")

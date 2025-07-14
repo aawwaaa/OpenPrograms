@@ -106,3 +106,8 @@ else
 end
 
 io.write("Done!\n")
+io.write("Reboot? [Y/n] ")
+answer = io.read()
+if answer ~= "n" then
+    require("computer").shutdown(true)
+end
