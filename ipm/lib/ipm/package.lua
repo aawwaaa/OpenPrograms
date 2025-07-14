@@ -69,7 +69,8 @@ function M.package_info(id)
     return package, installed
 end
 
-function M.prepare_install(id, target, auto_installed)
+function M.prepare_install(id, target, auto_installed, force)
+    id = id:lower()
     if not has_package_file(id) then
         io.stderr:write("Error: package " .. id .. " not found\n")
         return {
@@ -77,7 +78,7 @@ function M.prepare_install(id, target, auto_installed)
             errors = {"Package not found: " .. id}
         }
     end
-    if is_installed(id) then
+    if is_installed(id) and not force then
         io.stderr:write("Error: package " .. id .. " already installed\n")
         return {
             type = "install", before = {}, run = {}, after = {},
@@ -101,8 +102,9 @@ function M.prepare_install(id, target, auto_installed)
     data.package = package
     data.errors = {}
     for dep, path in pairs(package.dependencies or {}) do
+        dep = dep:lower()
         if not is_installed(dep) then
-            local dep_data = M.prepare_install(dep, path, true)
+            local dep_data = M.prepare_install(dep, path, true, force)
             table.insert(data.before, {"execute", dep, dep_data})
             if not dep_data then
                 table.insert(data.errors, "Dependency not satisfied: " .. dep)
@@ -208,6 +210,7 @@ function M.prepare_install(id, target, auto_installed)
 end
 
 function M.prepare_remove(id)
+    id = id:lower()
     if not is_installed(id) then
         io.stderr:write("Error: package " .. id .. " not installed\n")
         return {
@@ -241,6 +244,7 @@ function M.prepare_remove(id)
 end
 
 function M.prepare_upgrade(id)
+    id = id:lower()
     local installed = load_installed_file(id)
     if not installed then
         io.stderr:write("Error: package " .. id .. " not installed\n")
@@ -255,7 +259,7 @@ function M.prepare_upgrade(id)
             { "execute", "remove", M.prepare_remove(id) },
         },
         run = {
-            { "execute", "install", M.prepare_install(id, installed.install_path) },
+            { "execute", "install", M.prepare_install(id, installed.install_path, false, true) },
         },
         after = {}
     }
@@ -270,12 +274,14 @@ local execution = {
         M.execute(last)
     end,
     add_used = function(id, package)
+        id = id:lower()
         io.write("Add used: " .. id .. " <- " .. package .. "\n")
         local data = load_installed_file(id)
         data.used[package] = true
         save_installed_file(id, data)
     end,
     remove_used = function(id, package)
+        id = id:lower()
         io.write("Remove used: " .. id .. " <- " .. package .. "\n")
         local data = load_installed_file(id)
         data.used[package] = nil
@@ -307,6 +313,7 @@ local execution = {
         dofile(path)
     end,
     register = function(id, path, options)
+        id = id:lower()
         io.write("Register: " .. id .. " -> " .. path .. "\n")
         local data = load_package_file(id)
         data.used = {}
@@ -317,6 +324,7 @@ local execution = {
         save_installed_file(id, data)
     end,
     unregister = function(id)
+        id = id:lower()
         io.write("Unregister: " .. id .. "\n")
         os.remove(data_installed_base .. "/" .. id .. ".cfg")
     end
@@ -365,13 +373,15 @@ function M.execute(data)
     execute_stack = execute_stack - 1
 
     local function update_progress()
-        if execute_stack <= -2 then
+        if offset_y <= -3 then
             return
         end
         current_line = current_line + 1
         ipm.tui.progress(offset_y, "", current_line / total_lines)
     end
-    ipm.tui.progress(offset_y, "", 0)
+    if offset_y > -3 then
+        ipm.tui.progress(offset_y, "", 0)
+    end
     for _, task in ipairs(data.before) do
         update_progress()
         execute_line(task)
@@ -384,7 +394,9 @@ function M.execute(data)
         update_progress()
         execute_line(task)
     end
-    ipm.tui.text(offset_y, "")
+    if offset_y > -3 then
+        ipm.tui.text(offset_y, "")
+    end
     execute_stack = execute_stack + 1
 end
 

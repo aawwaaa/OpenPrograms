@@ -21,7 +21,6 @@ Usage:
     ipm info <id> - Show information about a package.
     ipm search <filter...> - Search for packages.
     ipm install [--path=<path>] <id> - Install a package.
-    ipm files <id> - List files in a installed package.
     ipm upgrade <id> - Upgrade a package.
     ipm upgrade all - Upgrade all packages.
     ipm remove <id> - Remove a package.

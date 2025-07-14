@@ -5,6 +5,7 @@ local M = {}
 function M.paged(text)
     local w, h = tty.getViewport()
     term.setCursor(1, 1)
+    term.clear()
     for i=1, #text, 20 do
         term.write(text:sub(i, i+19))
         local x, y = tty.getCursor()
@@ -16,8 +17,8 @@ function M.paged(text)
             local _ = io.read()
             term.setCursor(1, h)
             term.clearLine()
-            term.scroll(h - 5)
-            term.setCursor(x, y - (h - 5) - 2)
+            term.scroll(h - 7)
+            term.setCursor(x, y - (h - 7) - 2)
         end
     end
 end
@@ -26,7 +27,9 @@ function M.text(offset_y, text)
     local w, h = tty.getViewport()
     local x, y = tty.getCursor()
 
-    while y >= h + offset_y do
+    while y >= h + offset_y - 1 do
+        term.setCursor(1, h + offset_y)
+        term.clearLine()
         term.scroll(1)
         y = y - 1
     end
