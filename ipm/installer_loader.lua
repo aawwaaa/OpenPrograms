@@ -6,7 +6,16 @@ if not component.isAvailable("internet") then
     return
 end
 
-local installer = "https://raw.githubusercontent.com/aawwaaa/OpenPrograms/refs/heads/main/ipm/installer.lua"
+local use_mirror = false
+
+io.write("Use mirror? [y/N]")
+local answer = io.read()
+if answer == "y" then
+    use_mirror = true
+end
+
+local installer = use_mirror and "https://ghfast.top/raw.githubusercontent.com/aawwaaa/OpenPrograms/refs/heads/main/ipm/installer.lua"
+    or "https://raw.githubusercontent.com/aawwaaa/OpenPrograms/refs/heads/main/ipm/installer.lua"
 
 local con = internet.request(installer)
 if not con then
@@ -28,4 +37,4 @@ end
 
 io.write("Running installer...\n")
 
-func()
+func(use_mirror)

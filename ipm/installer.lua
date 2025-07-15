@@ -3,9 +3,13 @@ local mirror_repo = "https://ghfast.top/raw.githubusercontent.com/aawwaaa/OpenPr
 local mirror_config = [[{
     default_install_path = "/usr",
     redirects = {
-        ["raw.githubusercontent.com"] = "ghfast.top/raw.githubusercontent.com"
+        ["raw.githubusercontent.com"] = "ghfast.top/raw.githubusercontent.com",
+        ["http://pastebin.com"] = "https://pastebin.com"
     }
 }]]
+
+local use_mirror = ...
+use_mirror = use_mirror or false
 
 local files = {
     "/bin/ipm.lua",
@@ -52,13 +56,13 @@ local function download(file, dst)
 end
 
 io.write("Improved Package Manager Installer\n")
-io.write("Continue? [y/N/use_mirror]")
+io.write("Continue? [y/N]")
 local answer = io.read()
-if answer ~= "y" and answer ~= "use_mirror" then
+if answer ~= "y" then
     io.write("Aborting...\n")
     return
 end
-if answer == "use_mirror" then
+if use_mirror then
     io.write("Using mirror...\n")
     repo = mirror_repo
 end
@@ -70,7 +74,7 @@ end
 
 local ipm = loadfile("/usr/bin/ipm.lua")
 
-if answer == "use_mirror" then
+if use_mirror then
     local config = io.open("/etc/ipm/config.cfg", "w")
     if config then
         config:write(mirror_config)
@@ -88,7 +92,7 @@ else
     return
 end
 
-if answer == "use_mirror" then
+if use_mirror then
     local config = io.open("/etc/ipm/config.cfg", "w")
     if config then
         config:write(mirror_config)
