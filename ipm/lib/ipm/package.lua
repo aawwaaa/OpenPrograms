@@ -70,10 +70,10 @@ function M.package_info(id)
 end
 
 function M.prepare_install(id, target, auto_installed, force, deps)
-    if deps == nil then
-        deps = {}
-    end
     id = id:lower()
+    if deps == nil then
+        deps = {[id] = true}
+    end
     if not has_package_file(id) then
         io.stderr:write("Error: package " .. id .. " not found\n")
         return {
@@ -105,11 +105,6 @@ function M.prepare_install(id, target, auto_installed, force, deps)
     data.package = package
     data.errors = {}
     for dep, path in pairs(package.dependencies or {}) do
-        if deps[dep] then
-            table.insert(data.before, {"add_used", dep, id})
-            goto continue
-        end
-        deps[dep] = true
         if path:sub(1, 2) == "//" then
             path = path:sub(2)
         else
@@ -117,6 +112,11 @@ function M.prepare_install(id, target, auto_installed, force, deps)
         end
         local optional = dep:sub(1, 1) == "?"
         dep = dep:lower():gsub("^%?", "")
+        if deps[dep] then
+            table.insert(data.before, {"add_used", dep, id})
+            goto continue
+        end
+        deps[dep] = true
         if not is_installed(dep) then
             if optional then
                 io.write("Install optional dependency: " .. dep .. " -> " .. path .. "? [y/N] ")
