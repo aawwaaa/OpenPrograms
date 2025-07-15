@@ -242,6 +242,7 @@ local function resolve_package(source)
 end
 
 function M.resolve_sources()
+    loaded = {}
     while #loading > 0 do
         local source = table.remove(loading, 1)
         if loaded[source.type .. "--" .. source.id] then
