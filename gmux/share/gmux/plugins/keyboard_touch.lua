@@ -124,8 +124,8 @@ local function move(dx, dy)
         end
         graphics.gpu.setActiveBuffer(0)
         local w, h = graphics.gpu.getResolution()
-        x = math.min(math.max(x + dx, 1))
-        y = math.min(math.max(y + dy, 1))
+        x = math.min(math.max(x + dx, 1), w)
+        y = math.min(math.max(y + dy, 1), h)
         update_block()
         signal_drag()
         return true
