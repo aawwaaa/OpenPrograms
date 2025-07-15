@@ -4,14 +4,12 @@ local keyboard = require("keyboard")
 local component = require("component")
 local computer = require("computer")
 local unicode = require("unicode")
-
-local hint_text = "Keyboard Touch Enabled."
+local desktop = require("gmux/frontend/desktop")
 
 local main = ...
 
 local enabled = false
 local block = nil
-local hint_block = nil
 local operator = nil
 local x, y = 1, 1
 local function update_block()
@@ -32,7 +30,7 @@ local function signal_touch(mod)
     touch_sent = true
     modify = mod
     local screen = component.screen.address
-    main.handle_signal("touch", screen, x, y, modify, operator)
+    main.handle_signal("$touch", screen, x, y, modify, operator)
 end
 local function signal_drag()
     if not enabled then
@@ -42,7 +40,7 @@ local function signal_drag()
         return
     end
     local screen = component.screen.address
-    main.handle_signal("drag", screen, x, y, modify, operator)
+    main.handle_signal("$drag", screen, x, y, modify, operator)
 end
 local function signal_drop()
     if not enabled then
@@ -54,7 +52,7 @@ local function signal_drop()
     touch_sent = false
     modify = 0
     local screen = component.screen.address
-    main.handle_signal("drop", screen, x, y, modify, operator)
+    main.handle_signal("$drop", screen, x, y, modify, operator)
 end
 local function toggle(event)
     if event ~= "key_down" then
@@ -64,42 +62,24 @@ local function toggle(event)
         block:remove()
         block = nil
     end
-    if hint_block then
-        hint_block:remove()
-        hint_block = nil
-    end
     enabled = not enabled
     if enabled then
-        hint_block = graphics.Block:new({
-            x = 1,
-            y = 1,
-            overlay = true,
-            find_block = false,
-            source = {
-                copy = function(col, row, x, y, w, h)
-                    graphics.gpu.setActiveBuffer(0)
-                    graphics.gpu.setBackground(0x000000)
-                    graphics.gpu.setForeground(0xFFFFFF)
-                    graphics.gpu.set(col, row, hint_text:sub(x, x + w))
-                end,
-                need_copy = function()
-                    return true
-                end,
-                size = function()
-                    return #hint_text, 1
-                end,
-            }
-        })
         block = graphics.Block:new({
             x = 1,
             y = 1,
-            overlay = true,
+            layer = 1000,
             find_block = false,
             source = {
                 copy = function(col, row, x, y, w, h)
                     graphics.gpu.setActiveBuffer(0)
-                    graphics.gpu.setBackground(0x000000)
-                    graphics.gpu.setForeground(0xFFFFFF)
+                    local reverse = computer.uptime() % 2 < 1
+                    if reverse then
+                        graphics.gpu.setForeground(desktop.colors.background)
+                        graphics.gpu.setBackground(desktop.colors.primary)
+                    else
+                        graphics.gpu.setForeground(desktop.colors.primary)
+                        graphics.gpu.setBackground(desktop.colors.background)
+                    end
                     graphics.gpu.set(col, row, unicode.char(0x21D6))
                 end,
                 need_copy = function()

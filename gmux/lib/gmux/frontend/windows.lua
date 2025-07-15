@@ -29,19 +29,24 @@ M.windows = {}
 
 local Window = {}
 function Window:new(options)
+    if options.resizable == nil then
+        options.resizable = options.source.set_size ~= nil
+    end
     local obj = {
         x = options.x or 1,
         y = options.y or 1,
         process = options.process or nil,
         title = options.title or "Window",
         source = options.source or nil,
+        layer = options.layer,
         event_handler = options.event_handler or function (...) end,
         title_bar = true,
         minimized = false,
         maximized = false,
-        resizable = options.resizable or options.source.set_size ~= nil,
+        resizable = options.resizable,
         title_bar_dirty = true,
         onclose = options.onclose or function () end,
+        no_focus = options.no_focus or false,
 
         title_bar_block = nil,
         body_block = nil,
@@ -52,7 +57,9 @@ function Window:new(options)
     self.__index = self
     obj:init_title_bar()
     obj:init_block()
-    M.focused_window = obj
+    if not options.no_focus then
+        M.focused_window = obj
+    end
     table.insert(M.windows, 1, obj)
     if options.bind then
         options.process.win = obj
@@ -168,6 +175,7 @@ function Window:init_title_bar()
     self.title_bar_block = graphics.Block:new({
         x = self.x,
         y = self.y,
+        layer = self.layer,
         source = {
             copy = function(col, row, x, y, w, h)
                 self:update_title_bar()
@@ -223,6 +231,7 @@ function Window:init_block()
     self.body_block = graphics.Block:new({
         x = self.x,
         y = self.y + (self.title_bar and 1 or 0),
+        layer = self.layer,
         source = {
             copy = function(col, row, x, y, w, h)
                 self.source.copy(col, row, x, y, w, h)
@@ -304,7 +313,9 @@ function Window:process_prefix()
 end
 
 function Window:touch_event(signal, type, source, x, y, modify, ...)
-    self:focus()
+    if not self.no_focus then
+        self:focus()
+    end
     if type == "title_bar" then
         if signal ~= "touch" then
             return
@@ -415,6 +426,9 @@ function M.handle_signal(signal, ...)
             return
         end
     end
+    if signal:sub(1, 1) == "$" then
+        signal = signal:sub(2)
+    end
     if touch_events[signal] == nil then
         if M.focused_window then
             trigger_event_handler(M.focused_window.event_handler, signal, ...)
@@ -428,6 +442,10 @@ function M.handle_signal(signal, ...)
     end
     local block = graphics.find_block(x, y)
     if not block then
+        return
+    end
+    if block.event_handler then
+        trigger_event_handler(block.event_handler, signal, source, x, y, modify, name)
         return
     end
     if not block.object then

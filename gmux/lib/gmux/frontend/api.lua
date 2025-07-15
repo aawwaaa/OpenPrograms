@@ -104,12 +104,18 @@ function M.create_window(options)
         title = options.title,
         x = options.x or 1,
         y = options.y or 1,
-        bind = options.bind or false,
-        onclose = options.onclose
+        bind = options.bind,
+        onclose = options.onclose,
+        layer = options.layer,
+        resizable = options.resizable,
+        no_focus = options.no_focus,
     })
 end
 function M.create_window_buffer(options, func)
     local buffer = graphics.gpu.allocateBuffer(options.width, options.height)
+    if not buffer then
+        return nil
+    end
     graphics.gpu.setActiveBuffer(buffer)
     local status, error = xpcall(function()
         func(graphics.gpu)
@@ -124,14 +130,17 @@ function M.create_window_buffer(options, func)
         title = options.title,
         x = options.x or 1,
         y = options.y or 1,
-        bind = options.bind or false,
+        bind = options.bind,
         event_handler = options.event_handler,
+        layer = options.layer,
         onclose = function ()
             if options.onclose then
                 options.onclose()
             end
             graphics.gpu.freeBuffer(buffer)
-        end
+        end,
+        resizable = options.resizable,
+        no_focus = options.no_focus,
     })
 end
 function M.get_processes()
@@ -152,7 +161,7 @@ function M.show_error(error)
     local width, height = graphics.gpu.getResolution()
     width = width - 10
     height = height - 4
-    return M.create_window_buffer({
+    local window = M.create_window_buffer({
         width = width, height = height,
         title = "Error",
         x = 5, y = 2
@@ -175,6 +184,21 @@ function M.show_error(error)
             end
         end
     end)
+    if not window then
+        M.ocelot_log("Failed to create error window buffer")
+        M.ocelot_log("Error: \n" .. error)
+    end
+    return window
+end
+local ocelot;
+if require("component").isAvailable("ocelot") then
+    ocelot = require("component").ocelot
+end
+function M.ocelot_log(message)
+    if not ocelot then
+        return
+    end
+    ocelot.log(message)
 end
 
 function M.get_process()

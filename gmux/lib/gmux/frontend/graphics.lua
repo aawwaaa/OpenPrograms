@@ -147,13 +147,13 @@ function M.empty_source()
     }
 end
 
-local function overlay_end()
+local function layer_begin(layer)
     for i = 1, #M.blocks do
-        if not M.blocks[i].overlay then
+        if M.blocks[i].layer <= layer then
             return i
         end
     end
-    return 1
+    return #M.blocks + 1
 end
 
 local Block = {}
@@ -164,12 +164,13 @@ function Block:new(options)
         shown = true,
         source = options.source,
         block_changed = false,
-        overlay = options.overlay,
+        layer = options.layer or 0,
         find_block = options.find_block == nil or options.find_block,
+        event_handler = options.event_handler or nil,
     }
     setmetatable(obj, self)
     self.__index = self
-    table.insert(M.blocks, options.overlay and 1 or overlay_end(), obj)
+    table.insert(M.blocks, layer_begin(obj.layer), obj)
     return obj
 end
 
@@ -186,7 +187,7 @@ function Block:as_top()
     local index = self:index()
     if index then
         table.remove(M.blocks, index)
-        table.insert(M.blocks, self.overlay and 1 or overlay_end(), self)
+        table.insert(M.blocks, layer_begin(self.layer), self)
     end
     self.block_changed = true
 end

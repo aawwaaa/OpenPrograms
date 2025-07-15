@@ -17,11 +17,11 @@ local function load_apps()
     local apps = {}
     local path = filesystem.isDirectory("/usr/share/gmux/apps")
         and "/usr/share/gmux/apps" or "share/gmux/apps"
-    for k in pairs(package.loaded) do
-        if type(k) == "string" and k:sub(1, #path) == path then
-            package.loaded[k] = nil
-        end
-    end
+    -- for k in pairs(package.loaded) do
+    --     if type(k) == "string" and k:sub(1, #path) == path then
+    --         package.loaded[k] = nil
+    --     end
+    -- end
     local order = {}
     local order_file, error = io.open(path .. "/.order", "r")
     if order_file then
@@ -36,6 +36,8 @@ local function load_apps()
         if app == ".order" then
             goto continue
         end
+        graphics.gpu.setActiveBuffer(0)
+        io.write("Load app: " .. app .. "\n")
         table.insert(apps, {
             app = require("gmux/apps/" .. app),
             order = order[app] or 500
@@ -61,14 +63,34 @@ local function load_plugins()
             package.loaded[k] = nil
         end
     end
+    local enable = {}
+    local enable_file, err = io.open(path .. "/.enable", "r")
+    if enable_file then
+        enable = enable_file:read("*a")
+        enable_file:close()
+        enable = serialization.unserialize(enable)
+    end
     local original = package.path
     package.path = original .. ";/usr/share/?.lua;/usr/share/?/main.lua"
     for plugin in filesystem.list(path) do
-        plugin = plugin:gsub("%.lua$", "")
-        local ok, err = pcall(loadfile(path .. "/" .. plugin .. ".lua"), M)
-        if not ok then
-            api.show_error("Failed to load plugin: " .. plugin .. "\n" .. err)
+        if plugin == ".enable" then
+            goto continue
         end
+        plugin = plugin:gsub("%.lua$", "")
+        if enable[plugin] == false then
+            goto continue
+        end
+        graphics.gpu.setActiveBuffer(0)
+        io.write("Load plugin: " .. plugin .. "\n")
+        local file, err = loadfile(path .. "/" .. plugin .. ".lua")
+        if not file then
+            error("Failed to load plugin: " .. plugin .. "\n" .. err)
+        end
+        local ok, err = xpcall(file, debug.traceback, M)
+        if not ok then
+            error("Failed to load plugin: " .. plugin .. "\n" .. err .. "\n" .. debug.traceback())
+        end
+        ::continue::
     end
     package.path = original
 end

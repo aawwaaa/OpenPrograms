@@ -1,13 +1,15 @@
 local package = require("package")
 
-for k in pairs(package.loaded) do
-    if type(k) == "string" and (k:sub(1, 5) == "gmux/" or k:sub(1, #"/usr/share/gmux") == "/usr/share/gmux") then
-        package.loaded[k] = nil
-    end
-end
+-- for k in pairs(package.loaded) do
+--     if type(k) == "string" and (k:sub(1, 5) == "gmux/" or k:sub(1, #"/usr/share/gmux") == "/usr/share/gmux") then
+--         package.loaded[k] = nil
+--     end
+-- end
 
+io.write("Load backend...\n")
 local backend = require("gmux/backend/core")
 local component = require("component")
+io.write("Load frontend...\n")
 local main = require("gmux/frontend/main")
 
 local gpu = component.gpu

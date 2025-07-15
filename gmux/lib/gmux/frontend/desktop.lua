@@ -39,6 +39,7 @@ function M.init(apps)
     else
         colors = colors_colorful
     end
+    M.colors = colors
 
     M.apps = apps
 

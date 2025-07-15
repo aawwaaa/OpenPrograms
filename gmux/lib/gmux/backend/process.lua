@@ -173,11 +173,11 @@ end
 
 local process_index = 1
 function M.next()
-    local current_index = process_index
-    process_index = process_index + 1
     if process_index > #M.processes then
         process_index = 1
     end
+    local current_index = process_index
+    process_index = process_index + 1
     local process = M.processes[current_index]
     if process.status == "dead" or process.status == "error" then
         process:remove()
