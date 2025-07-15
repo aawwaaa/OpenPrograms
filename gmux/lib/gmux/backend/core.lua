@@ -37,9 +37,10 @@ function M.loop(update)
             last_yield = computer.uptime()
         end
         if update then update(function() do_break = true end) end
-        xpcall(process.next, function(msg)
-            process.error_handler(0, debug.traceback)
-        end)
+        local ok, err = xpcall(process.next, debug.traceback)
+        if not ok then
+            process.error_handler(0, err)
+        end
         if process.is_begin() then
             local deltat = computer.uptime() - last_check
             last_check = computer.uptime()

@@ -205,7 +205,8 @@ function Block:position()
     return self.x, self.y
 end
 function Block:size()
-    return self.source.size()
+    local w, h = self.source.size()
+    return w or 1, h or 1
 end
 function Block:contains(x, y)
     local bx, by = self:position()
