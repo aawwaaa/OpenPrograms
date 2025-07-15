@@ -282,7 +282,7 @@ function Window:close()
     end
 end
 
-function Window:process_prefix()
+function Window:_process_prefix()
     if not self.process then
         return ""
     end
@@ -294,6 +294,13 @@ function Window:process_prefix()
         return unicode.char(0x274C) .. " - "
     end
     return ""
+end
+
+function Window:process_prefix()
+    if graphics.gpu.getDepth() == 1 and M.focused_window == self then
+        return unicode.char(0x1F5AE) .. " " .. self:_process_prefix()
+    end
+    return self:_process_prefix()
 end
 
 function Window:touch_event(signal, type, source, x, y, modify, ...)
@@ -342,6 +349,10 @@ function Window:touch_event(signal, type, source, x, y, modify, ...)
         end
         local dx, dy = x - current_touch.x, y - current_touch.y
         self:set_position(dx, dy)
+        if signal == "touch" then
+            current_touch = nil
+            return
+        end
     end
     if current_touch and type == "resize" then
         if signal == "drop" then
@@ -350,6 +361,10 @@ function Window:touch_event(signal, type, source, x, y, modify, ...)
         end
         local wx, wy = self:position()
         self:set_size(x - wx + 1, y - wy + 1)
+        if signal == "touch" then
+            current_touch = nil
+            return
+        end
     end
 end
 
@@ -371,6 +386,8 @@ function M.set_current_touch(object)
     current_touch = object
 end
 
+M.signal_filters = {} -- (signal, ...) -> bool(handled)
+
 function M.handle_signal(signal, ...)
     if signal == nil then
         return
@@ -382,6 +399,14 @@ function M.handle_signal(signal, ...)
         if not ok then
             local api = require("gmux/frontend/api")
             api.show_error("An error occurred in the event handler: \n" .. err)
+            return false
+        else
+            return err
+        end
+    end
+    for _, filter in ipairs(M.signal_filters) do
+        if filter(signal, ...) then
+            return
         end
     end
     if input_events[signal] ~= nil then

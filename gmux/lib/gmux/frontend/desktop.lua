@@ -1,4 +1,5 @@
 local graphics = require("gmux/frontend/graphics")
+local computer = require("computer")
 local math = require("math")
 
 local M = {}
@@ -133,6 +134,7 @@ function M.applications()
             y = 1
         end
     end
+    local last_copy = 0
     local block = graphics.Block:new({
         x = 2,
         y = 2,
@@ -141,13 +143,14 @@ function M.applications()
                 graphics.gpu.bitblt(0, dst_col, dst_row, w, h, buffer, src_col, src_row)
             end,
             need_copy = function()
-                return applications_copy
+                return applications_copy or last_copy < computer.uptime()
             end,
             size = function()
                 return graphics.gpu.getBufferSize(buffer)
             end,
             after_copy = function()
                 applications_copy = false
+                last_copy = computer.uptime() + 1
             end
         }
     })

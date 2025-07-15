@@ -147,6 +147,15 @@ function M.empty_source()
     }
 end
 
+local function overlay_end()
+    for i = 1, #M.blocks do
+        if not M.blocks[i].overlay then
+            return i
+        end
+    end
+    return 1
+end
+
 local Block = {}
 function Block:new(options)
     local obj = {
@@ -154,11 +163,13 @@ function Block:new(options)
         y = options.y or 1,
         shown = true,
         source = options.source,
-        block_changed = false
+        block_changed = false,
+        overlay = options.overlay,
+        find_block = options.find_block == nil or options.find_block,
     }
     setmetatable(obj, self)
     self.__index = self
-    table.insert(M.blocks, 1, obj)
+    table.insert(M.blocks, options.overlay and 1 or overlay_end(), obj)
     return obj
 end
 
@@ -175,7 +186,7 @@ function Block:as_top()
     local index = self:index()
     if index then
         table.remove(M.blocks, index)
-        table.insert(M.blocks, 1, self)
+        table.insert(M.blocks, self.overlay and 1 or overlay_end(), self)
     end
     self.block_changed = true
 end
@@ -276,7 +287,7 @@ end
 
 function M.find_block(x, y)
     for _, block in ipairs(M.blocks) do
-        if block.shown and block:contains(x, y) then
+        if block.shown and block.find_block and block:contains(x, y) then
             return block
         end
     end

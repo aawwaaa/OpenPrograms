@@ -52,19 +52,44 @@ local function load_apps()
     return apps
 end
 
+local function load_plugins()
+    local plugins = {}
+    local path = filesystem.isDirectory("/usr/share/gmux/plugins")
+        and "/usr/share/gmux/plugins" or "share/gmux/plugins"
+    for k in pairs(package.loaded) do
+        if type(k) == "string" and k:sub(1, #path) == path then
+            package.loaded[k] = nil
+        end
+    end
+    local original = package.path
+    package.path = original .. ";/usr/share/?.lua;/usr/share/?/main.lua"
+    for plugin in filesystem.list(path) do
+        plugin = plugin:gsub("%.lua$", "")
+        local ok, err = pcall(loadfile(path .. "/" .. plugin .. ".lua"), M)
+        if not ok then
+            api.show_error("Failed to load plugin: " .. plugin .. "\n" .. err)
+        end
+    end
+    package.path = original
+end
+
+function M.handle_signal(...)
+    local ok, err = xpcall(windows.handle_signal, debug.traceback, ...)
+    if not ok then
+        api.show_error(err)
+    end
+end
+
 function M.main(be)
     backend = be
     graphics.gpu = component.gpu
     graphics.clear()
-    event.register(nil, function(...)
-        local ok, err = xpcall(windows.handle_signal, debug.traceback, ...)
-        if not ok then
-            api.show_error(err)
-        end
-    end, math.huge, math.huge)
+    event.register(nil, M.handle_signal, math.huge, math.huge)
     windows.init()
     local apps = load_apps()
     desktop.init(apps)
+
+    load_plugins()
 
     while true do
         graphics.draw()
