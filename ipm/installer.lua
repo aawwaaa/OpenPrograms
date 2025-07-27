@@ -18,6 +18,7 @@ local files = {
     "/etc/ipm/sources.list.d/aawwaaa.cfg",
     "/lib/ipm/format.lua",
     "/lib/ipm/internet.lua",
+    "/lib/ipm/execute.lua",
     "/lib/ipm/json.lua",
     "/lib/ipm/package.lua",
     "/lib/ipm/repo.lua",
