@@ -10,7 +10,7 @@ for index, package in ipairs(packages) do
     io.write("  - [" .. index .. "] " .. package.name .. " [" .. package.id .. "]" ..
         (package.installed and ", Installed" or "") ..
         (package.auto_installed and ", Auto Included" or "") .. "\n" ..
-        "    " .. package.description .. "\n")
+        "    " .. (package.description or "No description") .. "\n")
 end
 local index = nil
 if #packages > 1 then
