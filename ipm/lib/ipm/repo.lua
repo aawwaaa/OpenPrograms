@@ -41,7 +41,7 @@ function Repo:new(repo)
     return obj
 end
 
-function Repo:download(path, target)
+function Repo:fetch(path, target)
     local url = ipm.util.format(self.file_url, {
         repo = self.repo,
         path = path,

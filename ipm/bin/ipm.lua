@@ -2,14 +2,14 @@ local shell = require("shell")
 local serialization = require("serialization")
 local fs = require("filesystem")
 local ipm = require("ipm")
+-- local ipm = loadfile("/usr/lib/ipm/init.lua")()
 
 local config = ipm.util.load_file("/etc/ipm/config.cfg")
 
 local internet = ipm.internet.get_internet()
 
 if not internet then
-    io.stderr:write("No internet card found\n")
-    return
+    io.stderr:write("No internet card found, some features may not work\n")
 end
 
 local args, options = shell.parse(...)
@@ -23,6 +23,7 @@ Usage:
     ipm info <id> - Show information about a package.
     ipm search <filter...> - Search for packages.
     ipm install [--path=<path>] <id> - Install a package.
+    ipm mkinst (--d=<device>|--device=<device>) <id> - Make a install disk.
     ipm which <file> - Show which package contains a file.
     ipm upgrade <id> - Upgrade a package.
     ipm upgrade all - Upgrade all packages.
@@ -178,7 +179,7 @@ local function pastebin(args, options)
 
     io.write("Install: " .. filename .. "\n")
     ipm.tui.paged(ipm.format.execute_data(execution))
-    if ipm.package.has_error(execution) then
+    if ipm.execute.has_error(execution) then
         io.stderr:write("Error: execute data has error\n")
         return
     end
@@ -189,7 +190,7 @@ local function pastebin(args, options)
             return
         end
     end
-    ipm.package.execute(execution)
+    ipm.execute.execute(execution)
 end
 local function register(args, options)
     if #args == 0 then
@@ -302,10 +303,17 @@ if args[1] == "install" then
     local path = options.path or config.default_install_path
     table.remove(args, 1)
     for _, id in ipairs(args) do
-        local data = ipm.package.prepare_install(id, path, false, options.f or options.force)
+        local data = ipm.package.prepare_install({
+            id = id,
+            target = path,
+            auto_installed = false,
+            force = options.f or options.force,
+        })
         io.write("Install: " .. id .. "\n")
-        ipm.tui.paged(ipm.format.execute_data(data))
-        if ipm.package.has_error(data) then
+        if not options.y and not options.yes then
+            ipm.tui.paged(ipm.format.execute_data(data))
+        end
+        if ipm.execute.has_error(data) then
             io.stderr:write("Error: execute data has error\n")
             return
         end
@@ -316,9 +324,46 @@ if args[1] == "install" then
                 return
             end
         end
-        ipm.package.execute(data)
+        ipm.execute.execute(data)
     end
     return
+end
+if args[1] == "mkinst" then
+    local device = options.device or options.d or require("component").disk_drive.media()
+    local path = nil
+    for dev, p in fs.mounts() do
+        if dev.address:sub(1, #device) == device then
+            path = p
+            break
+        end
+    end
+    if not path then
+        io.stderr:write("Device not found\n")
+        return
+    end
+    table.remove(args, 1)
+    for _, id in ipairs(args) do
+        local data = ipm.package.prepare_mkinst({
+            id = id,
+            target = path,
+        })
+        io.write("Make install disk: " .. id .. " -> " .. path .. "\n")
+        if not options.y and not options.yes then
+            ipm.tui.paged(ipm.format.execute_data(data))
+        end
+        if ipm.execute.has_error(data) then
+            io.stderr:write("Error: execute data has error\n")
+            return
+        end
+        if not options.y and not options.yes then
+            io.write("Continue? [y/N]")
+            local answer = io.read()
+            if answer ~= "y" then
+                return
+            end
+        end
+        ipm.execute.execute(data)
+    end
 end
 if args[1] == "which" then
     local lua = shell.resolve(args[2], "lua")
@@ -369,8 +414,10 @@ if args[1] == "upgrade" then
     for _, id in ipairs(args) do
         local data = ipm.package.prepare_upgrade(id)
         io.write("Upgrade: " .. id .. "\n")
-        ipm.tui.paged(ipm.format.execute_data(data))
-        if ipm.package.has_error(data) then
+        if not options.y and not options.yes then
+            ipm.tui.paged(ipm.format.execute_data(data))
+        end
+        if ipm.execute.has_error(data) then
             io.stderr:write("Error: execute data has error\n")
             return
         end
@@ -381,7 +428,7 @@ if args[1] == "upgrade" then
                 return
             end
         end
-        ipm.package.execute(data)
+        ipm.execute.execute(data)
     end
     return
 end
@@ -408,8 +455,10 @@ if args[1] == "remove" then
     for _, id in ipairs(args) do
         local data = ipm.package.prepare_remove(id)
         io.write("Remove: " .. id .. "\n")
-        ipm.tui.paged(ipm.format.execute_data(data))
-        if ipm.package.has_error(data) then
+        if not options.y and not options.yes then
+            ipm.tui.paged(ipm.format.execute_data(data))
+        end
+        if ipm.execute.has_error(data) then
             io.stderr:write("Error: execute data has error\n")
             return
         end
@@ -420,7 +469,7 @@ if args[1] == "remove" then
                 return
             end
         end
-        ipm.package.execute(data)
+        ipm.execute.execute(data)
     end
     return
 end

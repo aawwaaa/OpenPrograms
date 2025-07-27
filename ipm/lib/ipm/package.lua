@@ -4,7 +4,8 @@ local ipm = ...
 
 local M = {}
 
-local data_package_base = "/usr/share/ipm/package"
+local data_package_base = ipm.install_base and ipm.install_base .. "/.ipm_packages"
+    or "/usr/share/ipm/package"
 local data_installed_base = "/usr/share/ipm/installed"
 M.data_package_base = data_package_base
 
@@ -20,6 +21,12 @@ local save_installed_file = ipm.util.cherry_base_path(ipm.util.save_file, data_i
 local function is_installed(id)
     return fs.exists(data_installed_base .. "/" .. tostring(id) .. ".cfg")
 end
+
+M.load_package_file = load_package_file
+M.has_package_file = has_package_file
+M.load_installed_file = load_installed_file
+M.save_installed_file = save_installed_file
+M.is_installed = is_installed
 
 function M.package_list()
     io.write("List: " .. data_package_base .. "\n")
@@ -69,41 +76,17 @@ function M.package_info(id)
     return package, installed
 end
 
-function M.prepare_install(id, target, auto_installed, force, deps)
-    id = id:lower()
-    if deps == nil then
-        deps = {[id] = true}
+local function solve_dependencies(options, deps)
+    local package = options.package
+    local target = options.target
+    local data = options.data
+    local install = options.install
+    local force = options.force
+    local check = options.check
+    local add_used = options.add_used
+    if add_used == nil then
+        add_used = true
     end
-    if not has_package_file(id) then
-        io.stderr:write("Error: package " .. id .. " not found\n")
-        return {
-            type = "install", before = {}, run = {}, after = {},
-            errors = {"Package not found: " .. id}
-        }
-    end
-    if is_installed(id) and not force then
-        io.stderr:write("Error: package " .. id .. " already installed\n")
-        return {
-            type = "install", before = {}, run = {}, after = {},
-            errors = {"Package already installed: " .. id}
-        }
-    end
-    local package = load_package_file(id)
-    if not package then
-        io.stderr:write("Error: package " .. id .. " not found\n")
-        return {
-            type = "install", before = {}, run = {}, after = {},
-            errors = {"Package not found: " .. id}
-        }
-    end
-    local data = {
-        type = "install",
-        before = {},
-        run = {},
-        after = {}
-    }
-    data.package = package
-    data.errors = {}
     for dep, path in pairs(package.dependencies or {}) do
         if path:sub(1, 2) == "//" then
             path = path:sub(2)
@@ -113,38 +96,48 @@ function M.prepare_install(id, target, auto_installed, force, deps)
         local optional = dep:sub(1, 1) == "?"
         dep = dep:lower():gsub("^%?", "")
         if deps[dep] then
-            table.insert(data.before, {"add_used", dep, id})
+            if add_used then
+                table.insert(data.before, {"add_used", dep, package.id})
+            end
             goto continue
         end
         deps[dep] = true
-        if not is_installed(dep) then
+        if not check(dep) then
             if optional then
                 io.write("Install optional dependency: " .. dep .. " -> " .. path .. "? [y/N] ")
                 if io.read("*l"):lower() ~= "y" then
                     goto continue
                 end
             end
-            local dep_data = M.prepare_install(dep, path, true, force, deps)
+            local dep_data = install({
+                id = dep,
+                target = path,
+                auto_installed = true,
+                force = force,
+                check = check,
+                add_used = add_used,
+            }, deps)
             table.insert(data.before, {"execute", dep, dep_data})
             if not dep_data then
                 table.insert(data.errors, "Dependency not satisfied: " .. dep)
             end
         end
-        table.insert(data.before, {"add_used", dep, id})
+        if add_used then
+            table.insert(data.before, {"add_used", dep, package.id})
+        end
         ::continue::
     end
-    io.write("Prepare install: " .. id .. " -> " .. target .. "\n")
-    local repo = ipm.repo.repo(package.repo)
-    if not repo then
-        table.insert(data.errors, "Repo error: " .. package.repo)
-        return data -- error message already printed
-    end
-
-    data.repo = repo
-    local files = {}
+end
+local function solve_files(options)
+    local target = options.target
+    local data = options.data
+    local repo = options.repo
+    local noskip = options.noskip
     local dirs = {}
     local dirs_added = {}
-    for src, dst in pairs(package.files) do
+    local files = {}
+    data.repo = repo.repo_str
+    for src, dst in pairs(options.files) do
         local optional, dir = false, false
         if src:sub(1, 1) == "?" then
             optional = true
@@ -158,13 +151,16 @@ function M.prepare_install(id, target, auto_installed, force, deps)
         if dst:sub(1, 2) == "//" then
             real_dst = dst:sub(2)
         end
+        if options.noabsolute and dst:sub(1, 2) == "//" then
+            real_dst = target .. dst:sub(2)
+        end
         if real_dst:sub(-1) == "!" then
             real_dst = real_dst:sub(1, -2)
         elseif not dir then
             real_dst = real_dst .. "/" .. fs.name(src)
         end
         real_dst = fs.canonical(real_dst)
-        if optional and fs.exists(real_dst) then
+        if optional and fs.exists(real_dst) and not noskip then
             io.write("Skipping optional file: " .. src .. " -> " .. real_dst .. "\n")
             table.insert(data.run, {"skip", src, real_dst})
             goto continue
@@ -189,7 +185,7 @@ function M.prepare_install(id, target, auto_installed, force, deps)
             else
                 dirs_added[dst_dir] = "never"
             end
-            table.insert(data.run, {"download", repo, src, real_dst})
+            table.insert(data.run, {"fetch", src, real_dst})
             goto continue
         end
         local results = repo:list(src, real_dst .. "/")
@@ -206,7 +202,7 @@ function M.prepare_install(id, target, auto_installed, force, deps)
                     table.insert(data.run, {"mkdir", dst_dir})
                 end
                 table.insert(files, real_dst)
-                table.insert(data.run, {"download", repo, path .. "/" .. name, real_dst})
+                table.insert(data.run, {"fetch", path .. "/" .. name, real_dst})
                 ::continue::
             end
         end
@@ -220,6 +216,63 @@ function M.prepare_install(id, target, auto_installed, force, deps)
         end
     end
 
+    return files, dirs
+end
+
+function M.prepare_install(options, deps)
+    local id = options.id:lower()
+    if deps == nil then
+        deps = {}
+    end
+    deps[id] = true
+    local force = options.force
+    local auto_installed = options.auto_installed
+    local target = options.target
+    if is_installed(id) and not force then
+        io.stderr:write("Error: package " .. id .. " already installed\n")
+        return {
+            errors = {"Package already installed: " .. id}
+        }
+    end
+    local package = load_package_file(id)
+    if not package then
+        io.stderr:write("Error: package " .. id .. " not found\n")
+        return {
+            errors = {"Package not found: " .. id}
+        }
+    end
+    local data = {
+        type = "install",
+        before = {},
+        run = {},
+        after = {}
+    }
+    data.package = package
+    data.errors = {}
+    solve_dependencies({
+        package = package,
+        target = target,
+        data = data,
+        install = M.prepare_install,
+        force = force,
+        check = is_installed,
+        add_used = options.add_used,
+    }, deps)
+
+    io.write("Prepare install: " .. id .. " -> " .. target .. "\n")
+    local repo = ipm.repo.repo(package.repo)
+    if not repo then
+        table.insert(data.errors, "Repo error: " .. package.repo)
+        return data -- error message already printed
+    end
+
+    local files, dirs = solve_files({
+        repo = repo,
+        target = target,
+        data = data,
+        files = package.files,
+    })
+
     if package.configure then
         table.insert(data.after, {"configure", target .. "/" .. package.configure})
     end
@@ -229,6 +282,58 @@ function M.prepare_install(id, target, auto_installed, force, deps)
         install_files = files,
         install_dirs = dirs,
     }})
+    return data
+end
+
+function M.prepare_mkinst(options, deps)
+    local id = options.id:lower()
+    if deps == nil then
+        deps = {}
+    end
+    deps[id] = true
+    local target = options.target
+    local package = load_package_file(id)
+    if not package then
+        io.stderr:write("Error: package " .. id .. " not found\n")
+        return {
+            errors = {"Package not found: " .. id}
+        }
+    end
+    local data = {
+        type = "mkinst",
+        before = {},
+        run = {},
+        after = {}
+    }
+    data.package = package
+    data.errors = {}
+    solve_dependencies({
+        package = package,
+        target = target,
+        data = data,
+        install = M.prepare_mkinst,
+        force = true,
+        check = function(id) return fs.exists(target .. "/.ipm_packages/" .. id .. ".cfg") end,
+        add_used = false,
+    }, deps)
+
+    io.write("Prepare mkinst: " .. id .. " -> " .. target .. "\n")
+    local repo = ipm.repo.repo(package.repo)
+    if not repo then
+        table.insert(data.errors, "Repo error: " .. package.repo)
+        return data -- error message already printed
+    end
+
+    solve_files({
+        repo = repo,
+        target = target,
+        data = data,
+        files = package.files,
+        noskip = true,
+        noabsolute = true,
+    })
+
+    table.insert(data.after, {"mkinst", id, target, options.auto_installed or false})
     return data
 end
 
@@ -273,7 +378,6 @@ function M.prepare_upgrade(id)
     if not installed then
         io.stderr:write("Error: package " .. id .. " not installed\n")
         return {
-            type = "upgrade", before = {}, run = {}, after = {},
             errors = {"Package not installed: " .. id}
         }
     end
@@ -288,186 +392,6 @@ function M.prepare_upgrade(id)
         after = {}
     }
     return data
-end
-
-local execution_log = {
-    execute = function(...)
-        local packed = table.pack(...)
-        local last = table.remove(packed, #packed)
-        io.write(table.concat(packed, " ") .. " -> Execute: " .. last.type .. "\n")
-    end,
-    add_used = function(id, package)
-        id = id:lower()
-        io.write("Add used: " .. id .. " <- " .. package .. "\n")
-    end,
-    remove_used = function(id, package)
-        id = id:lower()
-        io.write("Remove used: " .. id .. " <- " .. package .. "\n")
-    end,
-    skip = function(src, dst) end,
-    mkdir = function(dst)
-        io.write("Make directory: " .. dst .. "\n")
-    end,
-    download = function(repo, src, dst)
-        io.write("Download: " .. src .. " -> " .. dst .. "\n")
-    end,
-    rm = function(path)
-        io.write("Remove: " .. path .. "\n")
-    end,
-    rmdir = function(path)
-        io.write("Remove directory: " .. path .. "\n")
-    end,
-    configure = function(path)
-        io.write("Configure script: " .. path .. "\n")
-    end,
-    remove = function(path)
-        io.write("Remove script: " .. path .. "\n")
-    end,
-    register = function(id, path, options)
-        id = id:lower()
-        io.write("Register: " .. id .. " -> " .. path .. "\n")
-    end,
-    unregister = function(id)
-        id = id:lower()
-        io.write("Unregister: " .. id .. "\n")
-    end,
-}
-
-local execution = {
-    execute = function(...)
-        local packed = table.pack(...)
-        local last = table.remove(packed, #packed)
-        M.execute(last)
-    end,
-    add_used = function(id, package)
-        id = id:lower()
-        local data = load_installed_file(id)
-        data.used[package] = true
-        save_installed_file(id, data)
-    end,
-    remove_used = function(id, package)
-        id = id:lower()
-        local data = load_installed_file(id)
-        data.used[package] = nil
-        save_installed_file(id, data)
-    end,
-    skip = function(src, dst) end,
-    mkdir = function(dst)
-        fs.makeDirectory(dst)
-    end,
-    download = function(repo, src, dst)
-        repo:download(src, dst)
-    end,
-    rm = function(path)
-        fs.remove(path)
-    end,
-    rmdir = function(path)
-        ipm.util.rmdir(path)
-    end,
-    configure = function(path)
-        dofile(path)
-    end,
-    remove = function(path)
-        dofile(path)
-    end,
-    register = function(id, path, options)
-        id = id:lower()
-        local data = has_package_file(id) and load_package_file(id) or {
-            type = "package",
-            id = id,
-        }
-        data.used = {}
-        data.install_path = path
-        for k, v in pairs(options) do
-            data[k] = v
-        end
-        save_installed_file(id, data)
-    end,
-    unregister = function(id)
-        id = id:lower()
-        os.remove(data_installed_base .. "/" .. id .. ".cfg")
-    end
-}
-
-local function log(type, ...)
-    execution_log[type](...)
-end
-
-local function execute_line(line)
-    local type = table.remove(line, 1)
-    return execution[type](table.unpack(line))
-end
-
-function M.has_error(data)
-    if data.errors and next(data.errors) then
-        return true
-    end
-    for _, line in ipairs(data.before) do
-        if line[1] == "execute" then
-            if M.has_error(line[#line]) then
-                return true
-            end
-        end
-    end
-    for _, line in ipairs(data.run) do
-        if line[1] == "execute" then
-            if M.has_error(line[#line]) then
-                return true
-            end
-        end
-    end
-    for _, line in ipairs(data.after) do
-        if line[1] == "execute" then
-            if M.has_error(line[#line]) then
-                return true
-            end
-        end
-    end
-    return false
-end
-
-local execute_stack = 0
-
-function M.execute(data)
-    local total_lines = #data.before + #data.run + #data.after
-    local current_line = 0
-
-    local offset_y = execute_stack
-    execute_stack = execute_stack - 1
-
-    local function update_progress()
-        if offset_y <= -3 then
-            return
-        end
-        current_line = current_line + 1
-        ipm.tui.text(-5, "")
-        ipm.tui.progress(offset_y, "", current_line / total_lines)
-        for i=-2, offset_y-1, 1 do
-            ipm.tui.text(i, "")
-        end
-    end
-    if offset_y > -3 then
-        ipm.tui.progress(offset_y, "", 0)
-    end
-    for _, task in ipairs(data.before) do
-        log(table.unpack(task))
-        update_progress()
-        execute_line(task)
-    end
-    for _, task in ipairs(data.run) do
-        log(table.unpack(task))
-        update_progress()
-        execute_line(task)
-    end
-    for _, task in ipairs(data.after) do
-        log(table.unpack(task))
-        update_progress()
-        execute_line(task)
-    end
-    if offset_y > -3 then
-        ipm.tui.text(offset_y, "")
-    end
-    execute_stack = execute_stack + 1
 end
 
 return M

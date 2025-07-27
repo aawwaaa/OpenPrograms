@@ -44,6 +44,7 @@ backend.process.create_process({
     main = main.main,
     name = "GmuxFrontend",
     components = component.list(),
+    components_auto_add = true,
     args = {backend},
     error_handler = error_handler
 })

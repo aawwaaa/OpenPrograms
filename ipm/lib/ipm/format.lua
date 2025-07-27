@@ -100,9 +100,9 @@ local execution = {
         output = output .. tab .. " - Make directory: " .. dst .. "\n"
         return output
     end,
-    download = function(tab, repo, src, dst)
+    fetch = function(tab, src, dst)
         local output = ""
-        output = output .. tab .. " - Download: " .. tostring(src) .. " -> " .. tostring(dst) .. "\n"
+        output = output .. tab .. " - Fetch: " .. tostring(src) .. " -> " .. tostring(dst) .. "\n"
         return output
     end,
     rm = function(tab, path)
@@ -135,12 +135,15 @@ local execution = {
         output = output .. tab .. " - Unregister: " .. id .. "\n"
         return output
     end,
+    mkinst = function(tab, id, path)
+        local output = ""
+        output = output .. tab .. " - Make install disk: " .. id .. " -> " .. path .. "\n"
+        return output
+    end,
 }
 
 local function execution_line(tab, line)
-    local type = table.remove(line, 1)
-    local value = execution[type](tab, table.unpack(line))
-    table.insert(line, 1, type)
+    local value = execution[line[1]](tab, table.unpack(line, 2))
     return value
 end
 
@@ -150,14 +153,14 @@ function M.execute_data(data, tab)
     end
     local output = ""
     output = output .. "Execution: " .. data.type .. "\n"
-    if next(data.before) then
+    if next(data.before or {}) then
         output = output .. tab .. " Before:\n"
         for _, task in ipairs(data.before) do
             output = output .. execution_line(tab, task)
         end
     end
     if data.repo then
-        output = output .. tab .. " Repo: " .. data.repo.repo_str .. "\n"
+        output = output .. tab .. " Repo: " .. data.repo .. "\n"
     end
     if next(data.run or {}) then
         output = output .. tab .. " Run:\n"
