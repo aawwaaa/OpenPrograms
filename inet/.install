@@ -1,4 +1,8 @@
+print("Warning: This file is for debugging ONLY!")
+print("Copy to /usr to install it")
+
 local file = io.open("/home/.shrc", "w")
-file:write("ln -s " .. _ENV.install.from .. "/bin /usr/bin\n")
-file:write("ln -s " .. _ENV.install.from .. "/lib /usr/lib\n")
+file:write("ln -s " .. _ENV.install.from .. "bin /usr/bin\n")
+file:write("ln -s " .. _ENV.install.from .. "lib /usr/lib\n")
+file:write("inetclientd")
 file:close()
