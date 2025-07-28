@@ -1,0 +1,4 @@
+local file = io.open("/home/.shrc", "w")
+file:write("ln -s " .. _ENV.install.from .. "/bin /usr/bin\n")
+file:write("ln -s " .. _ENV.install.from .. "/lib /usr/lib\n")
+file:close()
