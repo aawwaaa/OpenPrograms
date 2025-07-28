@@ -18,8 +18,6 @@ M.patchs = {
     require("gmux/backend/patchs/04_thread"),
     require("gmux/backend/patchs/40_keyboard"),
     require("gmux/backend/patchs/50_tty"),
-    require("gmux/backend/patchs/51_core_cursor"),
-    require("gmux/backend/patchs/52_term"),
     require("gmux/backend/patchs/60_io"),
     require("gmux/backend/patchs/91_gpu"),
     require("gmux/backend/patchs/92_keyboard"),
@@ -39,8 +37,6 @@ M.package_patchs = {
     "thread",
     "keyboard",
     "tty",
-    "core/cursor",
-    "term"
 }
 
 function M.patch_coroutine()
