@@ -487,7 +487,7 @@ function M.wait_for_ack(id)
 end
 
 function M.suffix(dst)
-    return dst:sub(#con.addr + 1)
+    return dst:sub(#con.addr + 2)
 end
 function M.with_suffix(dst, suffix)
     return dst .. address_spacing .. suffix
