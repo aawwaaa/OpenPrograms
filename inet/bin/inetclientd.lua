@@ -30,11 +30,8 @@ event.listen("modem_message", handle_signal)
 event.timer(3, timer, math.huge)
 
 event.listen("inet", function(_, dst, src, ...)
-    print("INET", inet.suffix(dst))
     local type = inet.suffix(dst)
     if type == "ping" then
         inet.send_suffix("ping", src, computer.uptime())
     end
 end)
-
-print("inetd started")

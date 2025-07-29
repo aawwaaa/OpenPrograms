@@ -1,7 +1,12 @@
 local inet = require("inet")
 local shell = require("shell")
 
-local args = shell.parse(...)
+local args, options = shell.parse(...)
+
+local print = print
+if options.q or options.quiet then
+    print = function(...) end
+end
 
 -- 显示可用接入点列表
 local function display_access_points(access_points)

@@ -26,6 +26,7 @@ local con = {
     ap_data = nil,
     addr = nil,
     addr_esc = nil,
+    this = nil,
     parent = nil,
     parent_esc = nil,
     broadcast = nil,
@@ -171,12 +172,12 @@ local signals = {
         log(log_type.verify, "Response verify: ", result, message)
         push_signal_internal("response_verify", result, message)
     end,
-    [messages.response_address] = function(src_modem, device, address)
+    [messages.response_address] = function(src_modem, device, address, this)
         if src_modem ~= con.ap then
             return
         end
-        log(log_type.assign, "Response address: " .. device .. " -> " .. address)
-        push_signal_internal("response_address", device, address)
+        log(log_type.assign, "Response address: " .. this .. " -> " .. address)
+        push_signal_internal("response_address", device, address, this)
     end,
     [messages.ping] = function(src_modem)
         if status ~= "connected" then
@@ -270,7 +271,7 @@ local function timer()
     end
     if status == "connected" and con.ap ~= nil then
         if last_ping + timeouts.ping < uptime() then
-            send(con.ap, messages.ping)
+            send(con.ap, messages.ping, con.this)
             debug_log(log_type.ping, "Ping")
         end
         if last_ping + timeouts.ping_disconnect < uptime() then
@@ -365,7 +366,7 @@ function M.request_address()
     end
     update_status("request_address")
     send(con.ap, messages.request_address, inetmodem)
-    local signal, _, address = pull_signal_internal("response_address", timeouts.request_address)
+    local signal, _, address, this = pull_signal_internal("response_address", timeouts.request_address)
     if signal == nil then
         update_status("disconnected", "timeout")
         return nil, "timeout"
@@ -375,6 +376,7 @@ function M.request_address()
         return nil, "no address"
     end
     con.addr = address
+    con.this = this
     con.addr_esc = address:gsub(address_spacing_escaped, "%" .. address_spacing_escaped)
     con.parent = address:match("^(.+)" .. address_spacing_escaped) or ""
     con.parent_esc = con.parent:gsub(address_spacing_escaped, "%" .. address_spacing_escaped)
@@ -390,6 +392,7 @@ function M.disconnect()
     con.addr = nil
     con.addr_esc = nil
     con.parent = nil
+    con.this = nil
     con.broadcast = nil
     con.parent_esc = nil
 end

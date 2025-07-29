@@ -8,9 +8,9 @@
 `m!<src>@<dst>#!<id>` - 应答
 
 `a`, `dev` - 请求地址
-`A`, `dev`, `address` - 响应地址
+`A`, `dev`, `address`, `this` - 响应地址
 
-`f`, `dev` - 请求临近设备完整地址
+`f`, `dev/this` - 请求临近设备完整地址
 `F`, `dev` - 自身为请求的设备
 
 `p` - 请求可用接入点
@@ -19,7 +19,7 @@
 `v`, `...` - 验证
 `V`, `bool`, `message` - 响应
 
-`c` - ping请求
+`c`, `this` - ping请求
 `C` - 回应ping
 
 `address`: 地址

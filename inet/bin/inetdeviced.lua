@@ -17,6 +17,14 @@ local args, options = shell.parse(...)
 
 local type = args[1] or "router"
 
+local parsed_names = {}
+for i=2, #args do
+    local key, value = args[i]:match("^([^=]+)=(.*)$")
+    if key and value then
+        parsed_names[key] = value
+    end
+end
+
 local handle_signal, timer = (type == "root" and router.init_as_root
     or type == "switch" and switch.init
     or router.init)({
@@ -44,6 +52,7 @@ local handle_signal, timer = (type == "root" and router.init_as_root
             return true, "No verification"
         end
     },
+    names = parsed_names or {}
 })
 modem.open(10251)
 
@@ -56,5 +65,3 @@ event.listen("inet", function(_, dst, src, ...)
         inet.send(inet.with_suffix(src, "pong"), computer.uptime())
     end
 end)
-
-print("inetd started")

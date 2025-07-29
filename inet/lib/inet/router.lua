@@ -20,6 +20,8 @@ local push_signal = function(...) end
 local device_store = access_point.device_store
 local device_deferred = access_point.device_deferred
 
+local names = {}
+
 local con = inet.con
 
 local signals_router = {
@@ -27,19 +29,19 @@ local signals_router = {
         if access_point.check_reject(src_modem) then
             return
         end
-        local short = shorten(device)
-        access_point.add_device(short, src_modem)
-        local address = con.addr .. address_spacing .. short
+        local this = names[shorten(device)] or shorten(device)
+        access_point.add_device(this, src_modem)
+        local address = con.addr .. address_spacing .. this
         if con.addr == "" then
-            address = short
+            address = address:sub(2)
         end
-        send(src_modem, messages.response_address, device, address)
-        log(log_type.assign, "Assign address: " .. short .. " -> " .. address)
+        send(src_modem, messages.response_address, device, address, this)
+        log(log_type.assign, "Assign address: " .. this .. " -> " .. address)
     end,
-    [messages.response_nearby_device] = function(src_modem, address)
-        access_point.add_device(address, src_modem)
-        push_signal_internal("response_nearby_device", address, src_modem)
-        log(log_type.discover, "Response nearby device: " .. address .. " -> " .. src_modem)
+    [messages.response_nearby_device] = function(src_modem, this)
+        access_point.add_device(this, src_modem)
+        push_signal_internal("response_nearby_device", this, src_modem)
+        log(log_type.discover, "Response nearby device: " .. this .. " -> " .. src_modem)
     end,
     [messages.message] = function(src_modem, msg, src, dst, id, ...)
         if access_point.check_reject(src_modem) then
@@ -49,7 +51,7 @@ local signals_router = {
             local next = dst:match("^" .. con.addr_esc
                 .. (con.addr_esc ~= "" and address_spacing_escaped or "")
                 .. "([^" .. address_spacing_escaped .. "]+)")
-            if dst:find(shorten(src_modem)) and src_modem ~= con.ap then
+            if device_store[next] ~= nil and device_store[next].address == src_modem then
                 return -- duplicated broadcast packet
             end
             if next == broadcast_symbol then
@@ -60,7 +62,7 @@ local signals_router = {
                 return
             end
             if device_store[next] ~= nil then
-                send(device_store[next].device, msg, ...)
+                send(device_store[next].address, msg, ...)
                 log(log_type.route, "Forward message: child: " .. src .. " -> " .. dst, ...)
             else
                 broadcast(messages.request_nearby_device, next)
@@ -101,6 +103,7 @@ function M.init_as_root(options)
 end
 function M.init(options)
     options.mode = "router"
+    names = options.names or {}
     for key, value in pairs(signals_router) do
         inet.signals.router[key] = value
     end

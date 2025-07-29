@@ -5,7 +5,7 @@ D=C("modem")
 Da=D.address
 E=C("eeprom")
 F=computer.pushSignal
-Cf={connect="",connect_verify="",hidden=false,password="",name="Switch-"..Da:sub(1,8),wireless_strength=400}
+Cf={connect="",name="Switch-c64eeb54",password="",[".fff"]="hello",hidden=false,wireless_strength=400,connect_verify=""}
 Co=Cf.connect
 Na=Cf.name
 Pw=Cf.password
@@ -35,16 +35,16 @@ V=function(s,r,m) if not r then Ad="Verify failed "..m Es=-1 end Es=1 end,
 C=function() Pt=T()+5 end,
 -- access point
 p=function(s) if Es==1 and s~=Pa and not Cf.hidden then S(s,"P",Ad or"l",Na,Pw~=""and"password"or nil) end end,
-c=function(s) if Es==1 then S(s,"C") De[N(s)]=s end end,
+c=function(s,t) if Es==1 then S(s,"C") De[t or N(s)]=s end end,
 v=function(s,p) if p==Pw or Pw=="" then Ac[s]=true S(s,"V",true) else S(s,"V",false,p==""and"Password is required"or"Password is incorrect") end end,
 -- switch
-a=function(s,d) if not Ac[s] then S(s,"!") else De[N(d)]=s SC[d]=s S(Pa,"a",d) end end,
-A=function(s,d,a) S(SC[d],"A",d,a) SC[d]=nil end,
+a=function(s,d) if not Ac[s] then S(s,"!") else SC[d]=s S(Pa,"a",d) end end,
+A=function(s,d,a,t) S(SC[d],"A",d,a,t) De[t]=SC[d] SC[d]=nil end,
 f=function(s,d) if N(Da)==d and s==Pa then S(s,"F",d) else R("f",d) SC[d]=s end end,
 F=function(s,d) De[d]=s S(SC[d],"F",d) SC[d]=nil end,
 m=function(s,m,...) if not Ac[s] then S(s,"!") else Sr,Ds,Id=m:match("^m!(.+)@([^#]+)#?(.*)$")
 if Ds:sub(1,#Ad)==Ad then Ne=Ds:match("^"..Ad:gsub("%.","%%.")..(Ad~=""and"%."or"").."([^%.]*)")
-if Ds:find(N(s)) and s ~= Pa then return end
+if De[Ne]==s then return end
 if Ne=="~" then if s ~= Pa then return S(Pa,m,...) end for _,s in pairs(De) do if s ~= Pa then S(s,m,...) end end return end
 if De[Ne] then return S(De[Ne],m,...) else return S(Pa,m,...) end
 else S(Pa,m,...) end

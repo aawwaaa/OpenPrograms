@@ -29,12 +29,12 @@ local signal_switch = {
         end
         switch_call_map[device] = src_modem
         send(con.ap, messages.request_address, device)
-        access_point.add_device(shorten(device), src_modem)
         log(log_type.assign, "Assign address forward: " .. shorten(device) .. " -> " .. shorten(con.ap))
     end,
-    [messages.response_address] = function(src_modem, device, address)
-        send(switch_call_map[device], messages.response_address, device, address)
-        log(log_type.assign, "Address response forward: " .. shorten(device) .. " with " .. address .. " -> " .. shorten(switch_call_map[device]))
+    [messages.response_address] = function(src_modem, device, address, this)
+        send(switch_call_map[device], messages.response_address, device, address, this)
+        access_point.add_device(this, switch_call_map[device])
+        log(log_type.assign, "Address response forward: " .. this .. " with " .. address .. " -> " .. shorten(switch_call_map[device]))
         switch_call_map[device] = nil
     end,
     [messages.request_nearby_device] = function(src_modem, device)
@@ -61,7 +61,7 @@ local signal_switch = {
             local next = dst:match("^" .. con.addr_esc
                 .. (con.addr_esc ~= "" and address_spacing_escaped or "")
                 .. "([^" .. address_spacing_escaped .. "]+)")
-            if dst:find(shorten(src_modem)) and src_modem ~= con.ap then
+            if device_store[next] ~= nil and device_store[next].address == src_modem then
                 return -- duplicated broadcast packet
             end
             if next == broadcast_symbol then
@@ -71,10 +71,10 @@ local signal_switch = {
                     return
                 end
                 for short, data in pairs(device_store) do
-                    if data.device == con.ap then
+                    if data.address == con.ap then
                         goto continue
                     end
-                    send(data.device, msg, ...)
+                    send(data.address, msg, ...)
                     ::continue::
                 end
                 push_signal("inet", dst, src, ...)
@@ -83,7 +83,7 @@ local signal_switch = {
                 return
             end
             if device_store[next] ~= nil then
-                send(device_store[next].device, msg, ...)
+                send(device_store[next].address, msg, ...)
                 log(log_type.route, "Forward message: child: " .. src .. " -> " .. dst, ...)
             else
                 log(log_type.route, "Forward message: parent: " .. src .. " -> " .. dst, ...)

@@ -67,7 +67,7 @@ local function edit(configs, save, max)
                 term.write("Size limit exceeded\n")
             end
         end
-        term.write("[up/down] toggle [space/enter] edit [n] new\n[s] save & quit [q] discard & quit\n")
+        term.write("[up/down] toggle [space/enter] edit [n] new [d] delete\n[s] save & quit [q] discard & quit\n")
     end
 
     while true do
@@ -117,6 +117,14 @@ local function edit(configs, save, max)
                 break
             elseif code == keyboard.keys.q then
                 break
+            elseif code == keyboard.keys.d then
+                local k = keys[selected]
+                configs[k] = nil
+                table.remove(keys, selected)
+                selected = selected - 1
+                if selected < 1 then
+                    selected = 1
+                end
             end
         end
         ::continue::

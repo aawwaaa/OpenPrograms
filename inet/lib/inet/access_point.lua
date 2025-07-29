@@ -33,7 +33,7 @@ local parent_broadcast_address = ""
 
 local function add_device(short, device)
     device_store[short] = {
-        device = device,
+        address = device,
         lifetime = uptime() + timeouts.device
     }
     if device_store_deferred[short] then
@@ -72,13 +72,15 @@ local function timer()
 end
 
 local signals = {
-    [messages.ping] = function(src_modem)
+    [messages.ping] = function(src_modem, this)
         if inet.status().status ~= "connected" then
             return
         end
         debug_log(log_type.ping, "Ping")
         send(src_modem, messages.pong)
-        add_device(shorten(src_modem), src_modem)
+        if this then
+            add_device(this, src_modem)
+        end
     end,
     [messages.request_available_access_point] = function(src_modem, ...)
         if src_modem == con.ap then
