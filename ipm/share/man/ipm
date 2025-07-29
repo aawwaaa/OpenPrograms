@@ -1,0 +1,339 @@
+NAME
+  ipm - Improved Package Manager for OpenComputers
+
+SYNOPSIS
+  ipm list [-ia] [id-filter]
+  ipm info <id>
+  ipm search <filter...>
+  ipm install [--path=<path>] <id>
+  ipm mkinst (--d=<device>|--device=<device>) <id>
+  ipm which <file>
+  ipm upgrade <id>
+  ipm upgrade all
+  ipm remove <id>
+  ipm remove auto
+  ipm update [name]
+  ipm clear
+  ipm source list
+  ipm source info <id> [type]
+  ipm source files
+  ipm source add <name> [template:repos|<packages>]
+  ipm source edit [name]
+  ipm source remove <name>
+  ipm pastebin <id> <filename>
+  ipm register <user>/<repo> [id]
+
+DESCRIPTION
+  IPM (Improved Package Manager) is a package manager designed specifically for OpenComputers, supporting OpenPrograms, HEL, and pastebin single-file programs. It provides complete package management functionality, including package installation, upgrade, removal, dependency resolution, and more.
+
+  IPM uses a modular design, supporting multiple source types and repository formats, with powerful dependency resolution capabilities and flexible configuration options.
+
+ARCHITECTURE
+  The IPM system consists of the following core components:
+
+  1. Source Management System
+     - Supports multiple source types: repos, packages, repo, package
+     - Recursive loading and priority system
+     - Dynamic loading and parsing of source configuration files
+
+  2. Package Management System
+     - Package information storage and retrieval
+     - Dependency relationship resolution
+     - Installation status tracking
+     - Package registration and deregistration
+
+  3. Repository System
+     - Support for remote repositories like GitHub
+     - File downloading and directory listing
+     - Custom repository type support
+
+  4. Execution System
+     - Installation, configuration, and removal operations
+     - File mapping and copying
+     - Script execution
+
+  5. Data Storage System
+     - Package information caching
+     - Installation status records
+     - Dependency relationship graph
+
+SOURCE CONFIGURATION
+  Source configuration files are located in the /etc/ipm/sources.list.d/ directory, with each file containing one or more source definitions.
+
+  Source Type Descriptions:
+
+  1. repos type - Repository list source
+     {
+       type = "repos",
+       id = "unique_id",
+       name = "Display Name",
+       description = "Description",
+       url = "Repository list URL",
+       priority = 100,
+       enabled = true,
+       recursive = true,
+     }
+
+  2. packages type - Package list source
+     {
+       type = "packages",
+       id = "unique_id",
+       name = "Display Name",
+       description = "Description",
+       url = "Package list URL",
+       priority = 100,
+       enabled = true,
+       recursive = true,
+     }
+
+  3. repo type - Single repository definition
+     {
+       type = "repo",
+       id = "github",
+       name = "GitHub",
+       file_url = "https://raw.githubusercontent.com/${repo}/${path:1}/${path:2..}",
+       dir_url = "https://api.github.com/repos/${repo}/contents/${path:2..}?ref=${1}",
+       dir_url_format = {
+         ["<key>"] = {
+           ["download_url"] = "<url>",
+           ["type"] = "<type:file=file,dir=dir>",
+           ["name"] = "<name>",
+           ["size"] = "<size>",
+         }
+       }
+     }
+
+  4. package type - Single package definition
+     {
+       type = "package",
+       id = "package_id",
+       name = "Package Name",
+       description = "Package Description",
+       authors = "Author Information",
+       repo = "github:user/repo",
+       dependencies = {
+         ["dependency_id"] = "/install/path"
+       },
+       files = {
+         ["source_path"] = "target_path"
+       }
+     }
+
+PACKAGE FORMAT
+  Package definitions contain the following fields:
+
+  Required Fields:
+  - type: Package type, usually "package"
+  - id: Unique package identifier
+  - name: Package display name
+  - files: File mapping table
+
+  Optional Fields:
+  - description: Package description information
+  - authors: Author information
+  - repo: Repository identifier
+  - dependencies: Dependency relationship table
+  - note: Installation instructions and notes
+  - hidden: Whether to hide in the list
+  - configure: Configuration script path
+  - remove: Removal script path
+
+  File Mapping Syntax:
+  - ["source_path"] = "/target_path" - Relative path installation
+  - ["source_path"] = "//absolute_path" - Absolute path installation
+  - [":source_folder"] = "/target_folder" - Folder copy
+  - ["?source_path"] = "/target_path" - Conditional installation (only when file doesn't exist)
+
+REPOSITORY TYPES
+  IPM supports multiple repository types:
+
+  1. GitHub Repository (github:user/repo)
+     - Automatic GitHub API support
+     - File URL format: https://raw.githubusercontent.com/user/repo/branch/path
+     - Directory URL format: https://api.github.com/repos/user/repo/contents/path
+     - Support for GitHub Personal Access Token (PAT) authentication
+     - Configure authentication information through headers field
+     - Support for private repository access and API rate limit optimization
+
+  2. Direct URL Sources
+     - Support for HTTP/HTTPS direct downloads
+     - Suitable for static file hosting
+
+  3. Local Data Sources
+     - Define package information directly in configuration files
+     - Suitable for small projects or testing
+
+  4. Pastebin Integration
+     - Support for downloading single-file programs from Pastebin
+     - Automatic package registration
+
+AUTHENTICATION & SECURITY
+  IPM supports multiple authentication methods to ensure secure access:
+
+  1. GitHub Personal Access Token (PAT)
+     - Purpose: Access private repositories and avoid API rate limits
+     - Configuration: Add headers field in repo type configuration
+     - Format: Authorization: Bearer <your_pat>
+     - Permissions: Recommend granting only necessary repo permissions
+
+  2. Security Best Practices:
+     - Regularly rotate PAT tokens
+     - Use principle of least privilege
+     - Avoid storing sensitive information in public configuration files
+     - Monitor API usage
+
+  3. Troubleshooting:
+     - 401 Error: Check if PAT is valid and has sufficient permissions
+     - 403 Error: Confirm repository access permissions
+     - Rate Limits: Using PAT can increase API call limits
+
+FILE MAPPING
+  File mapping defines the mapping relationship from source files to target locations:
+
+  Path Formats:
+  - Relative path: Starts with "/", relative to installation root directory
+  - Absolute path: Starts with "//", uses absolute path
+  - Folder: Starts with ":", copies entire folder
+  - Conditional installation: Starts with "?", only installs when file doesn't exist
+
+  Examples:
+  ["master/bin/program.lua"] = "/bin/program.lua"
+  ["master/config.cfg"] = "//etc/program/config.cfg"
+  [":master/lib"] = "/lib/program"
+  ["?master/config.cfg"] = "//etc/program/config.cfg"
+
+DEPENDENCIES
+  Dependencies define the dependency relationships between packages:
+
+  Syntax:
+  dependencies = {
+    ["package_id"] = "/install/path"
+  }
+
+  Path Descriptions:
+  - "/path" - Relative path, relative to installation root directory
+  - "//path" - Absolute path
+  - Optional dependencies: Package IDs starting with "?" indicate optional dependencies
+
+  Dependency Resolution:
+  - IPM automatically resolves dependency relationships
+  - Supports circular dependency detection
+  - Installs according to priority and dependency order
+
+EXAMPLES
+  1. Create a simple package source configuration:
+     {
+       type = "packages",
+       id = "my-packages",
+       name = "My Packages",
+       url = "https://raw.githubusercontent.com/user/repo/master/packages.cfg",
+       priority = 100,
+       enabled = true
+     }
+
+  2. Define a single package:
+     {
+       type = "package",
+       id = "my-program",
+       name = "My Program",
+       description = "A simple program",
+       authors = "Your Name",
+       repo = "github:user/repo",
+       files = {
+         ["master/bin/program.lua"] = "/bin/program.lua",
+         ["master/config.cfg"] = "//etc/program/config.cfg",
+         [":master/lib"] = "/lib/program"
+       },
+       dependencies = {
+         ["some-library"] = "/lib"
+       }
+     }
+
+  3. Create GitHub repository type:
+     {
+       type = "repo",
+       id = "github",
+       name = "GitHub",
+       file_url = "https://raw.githubusercontent.com/${repo}/${path:1}/${path:2..}",
+       dir_url = "https://api.github.com/repos/${repo}/contents/${path:2..}?ref=${1}",
+       dir_url_format = {
+         ["<key>"] = {
+           ["download_url"] = "<url>",
+           ["type"] = "<type:file=file,dir=dir>",
+           ["name"] = "<name>",
+           ["size"] = "<size>"
+         }
+       }
+     }
+
+  4. Configure GitHub PAT authentication:
+     {
+       type = "repo",
+       id = "github",
+       name = "GitHub",
+       file_url = "https://raw.githubusercontent.com/${repo}/${path:1}/${path:2..}",
+       dir_url = "https://api.github.com/repos/${repo}/contents/${path:2..}?ref=${path:1}",
+       dir_url_format = {
+         ["<key>"] = {
+           ["type"] = "<is_dir:=dir>",
+           ["name"] = "<name>",
+         }
+       },
+       dir_url_response = "json",
+       headers = {
+         ["Authorization"] = "Bearer <your_pat>",
+       }
+     }
+
+DEVELOPMENT GUIDE
+  Developing your own sources and packages:
+
+  1. Create source configuration files:
+     - Create .cfg files in /etc/ipm/sources.list.d/
+     - Define sources using Lua table format
+     - Support recursive loading and priority
+
+  2. Package definition best practices:
+     - Use unique package IDs
+     - Provide clear descriptions and author information
+     - Correctly set file mapping paths
+     - Define necessary dependency relationships
+
+  3. Repository type development:
+     - Implement file URL and directory URL formats
+     - Define directory listing parsing formats
+     - Support necessary HTTP header information
+     - Configure authentication information (such as GitHub PAT)
+     - Handle API rate limits and error responses
+
+  4. Testing and validation:
+     - Use ipm source list to verify source loading
+     - Use ipm list to check package lists
+     - Use ipm info to view package details
+     - Test installation and dependency resolution
+     - Verify authentication configuration (such as PAT tokens)
+     - Check API access permissions and rate limits
+
+FILES
+  /bin/ipm.lua                    - IPM main program
+  /lib/ipm/                        - IPM library files
+  /etc/ipm/config.cfg              - IPM configuration file
+  /etc/ipm/sources.list.cfg        - Main source configuration file
+  /etc/ipm/sources.list.d/         - Source configuration directory
+  /usr/share/ipm/package/          - Package information cache
+  /usr/share/ipm/installed/        - Installed package information
+  /usr/share/ipm/repo/             - Repository type definitions
+  /usr/share/ipm/source/           - Source data cache
+
+SYSTEM REQUIREMENTS
+  - OpenComputers mod
+  - Internet card (for remote sources)
+  - Filesystem access
+  - Serialization library
+  - Shell library
+
+AUTHORS
+  Written by aawwaaa
+
+SEE ALSO
+  ipm(1), oppm(1), pm(1) 
