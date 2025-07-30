@@ -100,7 +100,7 @@ local signals = {
             log(log_type.verify, "Verified: " .. src_modem, "No verification")
             result, message = true, "No verification"
         else
-            result, message = access_point_config.check(src_modem, ...)
+            result, message = access_point_config.accept(src_modem, ...)
             if result then
                 access_point_accepted[src_modem] = true
                 log(log_type.verify, "Verified: " .. src_modem, message)

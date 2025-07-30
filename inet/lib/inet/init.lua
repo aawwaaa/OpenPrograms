@@ -311,7 +311,7 @@ local function timer()
                 M.connect_to(connection_info.ap)
                 M.verify(table.unpack(connection_info.verify))
                 M.request_address()
-            end):start()
+            end)
         end
     end
 end

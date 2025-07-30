@@ -51,6 +51,14 @@ local function configure_basic()
 
     print("Modem: " .. modem)
 
+    local wireless_strength = 400
+
+    if modem ~= "*" and component.invoke(modem, "isWireless") then
+        io.write("Wireless strength? [400] ")
+        local wireless_strength = tonumber(io.read("*l")) or wireless_strength
+        print("Wireless strength: " .. wireless_strength)
+    end
+
     io.write("Port for inet: [10251] ")
     local port = tonumber(io.read("*l")) or 10251
 
@@ -64,7 +72,8 @@ local function configure_basic()
         modem = modem,
         port = port,
         logging = logging,
-        enabled = true
+        enabled = true,
+        wireless_strength = wireless_strength,
     }
 end
 
@@ -106,6 +115,73 @@ local function configure_router()
     end
 end
 
+local function configure_connection()
+    print("Connection:")
+    print("1. Automatically connect to the access point that needn't verify.")
+    print("2. Scan for access points and pick one.")
+    print("3. Manually configure.")
+    print("4. Do not connect.")
+    io.write("Connection type? [1] ")
+    local type = io.read("*l")
+    if type == "" then type = "1" end
+
+    local config = {
+        enabled = true,
+        ap = "*",
+        verify = ""
+    } -- type 1
+
+    if type == "2" then
+        print("Initializing inet...")
+        local file = io.open("/etc/inetcon.cfg", "w")
+        if file then
+            file:write(serialization.serialize({enabled=false}, math.huge))
+            file:close()
+        else
+            print("Failed to write config to /etc/inetcon.cfg")
+        end
+        dofile("/etc/rc.d/inet.lua")
+        local inet = require("inet")
+        print("Scanning for access points...")
+        local ap_map = inet.list_access_points()
+        local aps = {}
+        for k, v in pairs(ap_map) do
+            table.insert(aps, k)
+        end
+        table.sort(aps)
+        if #aps == 0 then
+            print("No access points found.")
+            print("Using type 1.")
+            goto write
+        end
+        for i, ap in ipairs(aps) do
+            print(i .. ". " .. ap_map[ap].name .. " - " .. (ap_map[ap].verify or "Open"))
+        end
+        io.write("Select one: ")
+        local index = tonumber(io.read("*l"))
+        local ap = aps[index]
+        config.ap = ap
+        if ap_map[ap].verify then
+            print("Verify prompt: " .. ap_map[ap].verify)
+            config.verify = io.read("*l")
+        end
+    elseif type == "3" then
+        loadfile(shell.resolve("inetconfig","lua"))("c")
+        return
+    elseif type == "4" then
+        config.enabled = false
+    end
+
+    ::write::
+    local file = io.open("/etc/inetcon.cfg", "w")
+    if file then
+        file:write(serialization.serialize(config, math.huge))
+        file:close()
+    else
+        print("Failed to write config to /etc/inetcon.cfg")
+    end
+end
+
 local config = configure_basic()
 if config.mode ~= "client" then
     configure_access_point(config)
@@ -124,4 +200,12 @@ if config.mode == "router" or config.mode == "root" then
     configure_router()
 end
 
+if config.modem ~= "*" then
+    configure_connection()
+else
+    print("No modem found, skipping connection configuration.")
+    print("You can configure it later by running inetconfig c")
+end
+
+print("\x1b[32mRestart is required.\x1b[0m")
 print("Do not forget to make rc work if you haven't done so.")

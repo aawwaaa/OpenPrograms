@@ -73,7 +73,8 @@ do
                         return false, "Invalid password"
                     end
                     return true, "No verification"
-                end
+                end,
+                hidden = false,
             }
         }
         if config.mode == "router" then
@@ -104,6 +105,10 @@ do
     local handle_signal, timer = init(options)
 
     modem.open(port)
+
+    if modem.isWireless() and config.wireless_strength ~= nil then
+        modem.setStrength(config.wireless_strength)
+    end
 
     event.register(nil, handle_signal, math.huge, math.huge)
     event.timer(3, timer, math.huge)
@@ -140,7 +145,7 @@ do
             inet.verify(config.verify)
             inet.request_address()
         end
-    end):start()
+    end)
 
     ::continue::
 end
