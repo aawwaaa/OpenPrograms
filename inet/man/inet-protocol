@@ -1,0 +1,105 @@
+NAME
+  inet-protocol - inet Network Protocol Definition
+
+Layer 3 - Network Layer
+  An inet-enabled device handles these packets:
+
+  p
+    Probe for available access points
+  P, address, name, verify
+    Response to probe
+  a, modem-address
+    Request address allocation
+  A, modem-address, address, this
+    Address allocation response
+  v, ...
+    Authentication request (... = auth data)
+  V, bool, message
+    Authentication response (bool = success)
+  f, this
+    Request nearby device addresses
+  F, this
+    Response to device address request
+  c, this
+    Ping (updates device record)
+  C
+    Ping response
+  m!src@dst, ...
+    Standard message
+  m!src@dst#id, ...
+    Reliable message (requires ACK)
+  m!src@dst#!id, ...
+    Reliable message ACK
+  !
+    Access denied
+
+  *For microcontrollers with wireless config (<5m range):*
+  .
+    Discover nearby microcontrollers
+  :, nil, status
+    Status report
+  :, key, value
+    Configuration data (sent multiple times)
+  =, config
+    Set config (config = evaluable Lua code)
+
+Layer 4 - Protocol Layer
+  Devices communicate using specific packet sequences.
+  Notation:
+    < Address | Incoming data
+    > Address | Outgoing data
+    ~~~ = Broadcast address
+
+  Discovering Access Points:
+    > ~~~ | p
+    < d12 | P, d12, Router-d12, nil
+    < f7a | P, d12, Switch-f7a, password
+    < 037 | P, someplace.ap1, Access Point, nil
+
+  Connecting to d12:
+    > d12 | v, ""  // Blank auth for open APs
+    < d12 | V, true, Welcome
+
+  Address Allocation (Optional):
+    > d12 | a, 189bb6e2-add7-4df2-85ce-c16534402c50
+    < d12 | A, 189bb6e2-add7-4df2-85ce-c16534402c50, d12.device, device
+
+  Keepalive & Device Query:
+    > d12 | c, device  // Ping
+    < d12 | C          // Ping response
+    < d12 | f, device  // Device query
+    > d12 | F, device  // Query response
+
+  Messaging:
+    > d12 | m!d12.device@someplace.computer, Hello      // Standard
+    > d12 | m!d12.device.pong@someplace.computer.ping   // Port-specific
+    < d12 | m!someplace.computer.ping!d12.device.pong   // Reply
+    > d12 | m!d12.device@someplace.computer#1234567890, Hello  // Reliable
+    < d12 | m!someplace.computer@d12.device#!1234567890 // Reliable ACK
+    < d12 | m!someplace.computer@d12.~, Broadcast        // Broadcast
+
+Access Point (AP) Policies:
+  - Records devices on `c` (ping)
+  - Responds to `p` with `P`
+  - Responds to `v` with `V`
+
+Router Policies:
+  - Handles `a` (address requests):
+    - Assigns names (e.g., `d12.device`)
+    - Uses first 3 chars of modem-address if no name exists
+  - Handles `F` (device responses): Updates device table
+  - Routes messages:
+    - For local addresses (`d12.X`): Forwards based on device table
+    - For unknown local addresses: Broadcasts `f` query
+    - For external addresses: Forwards to its own AP
+    - For broadcast (`~`): Rebroadcasts locally
+
+Switch Policies:
+  - Forwards `a` requests to its AP
+  - Forwards `A` responses to originator
+  - Broadcasts `f` queries (`> ~~~ | f, device`)
+  - Forwards `F` responses to its AP
+  - Routes messages:
+    - For local addresses: Forwards directly if known, else to AP
+    - For external addresses: Forwards to its AP
+    - For broadcast (`~`): Rebroadcasts locally

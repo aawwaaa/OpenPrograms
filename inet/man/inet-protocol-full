@@ -1,0 +1,166 @@
+NAME
+  inet-protocol - inet network protocol definition
+
+Layer 3 - Network Layer
+  An inet-enabled device sends/receives the following packets:
+
+  p
+    Request available access points nearby
+  P, address, name, verify
+    Response to access point request
+  a, modem-address
+    Request address allocation
+  A, modem-address, address, this
+    Response to address allocation request
+  v, ...
+    Request authentication, ... contains authentication data
+  V, bool, message
+    Response to authentication request, bool indicates success, message contains info
+  f, this
+    Request nearby device addresses
+  F, this
+    Response to nearby device address request
+  c, this
+    Ping and update device record
+  C
+    Response to ping request
+  m!src@dst, ...
+    Regular message
+  m!src@dst#id, ...
+    Reliable message
+  m!src@dst#!id, ...
+    Reliable message acknowledgment
+  !
+    Access denied
+
+  For microcontrollers with wireless configuration capability (when source distance <5m), additional packets:
+
+  .
+    Query nearby microcontrollers
+  :, nil, status
+    Status information
+  :, key, value
+    Configuration information (sent multiple times)
+  =, config
+    Set configuration (requires valid, evaluable Lua code)
+
+Layer 4 - Protocol Layer
+  Devices communicate by combining packets in specific sequences.
+  Notation:
+    < address | incoming data
+    > address | outgoing data
+    Address can be ~~~ for broadcast
+
+  Discovering nearby access points:
+    > ~~~ | p
+      Broadcast access point request
+    < d12 | P, d12, Router-d12, nil
+      Device d12 responds: address=d12, name=Router-d12, open
+    < f7a | P, d12, Switch-f7a, password
+      Device f7a responds: address=d12 (router's address), name=Switch-f7a, requires password
+    < 037 | P, someplace.ap1, Access Point, nil
+      Device 037 responds: address=someplace.ap1, name=Access Point, open
+
+  Connecting to d12 (example):
+    > d12 | v, ""
+      Send blank authentication (or actual password if required)
+    < d12 | V, true, Welcome
+      Authentication successful (message "Welcome" should be displayed)
+
+  Address allocation (optional):
+    > d12 | a, 189bb6e2-add7-4df2-85ce-c16534402c50
+      Request address using device MAC
+    < d12 | A, 189bb6e2-add7-4df2-85ce-c16534402c50, d12.device, device
+      Assigned address: d12.device, name: device
+
+  Maintaining connection:
+    > d12 | c, device
+      Periodic ping (name=device)
+    < d12 | C
+      Ping acknowledgment
+
+  Device discovery:
+    < d12 | f, device
+    > d12 | F, device
+      Response to discovery (typically from router/switch)
+
+  Message-based communication:
+    > d12 | m!d12.device@someplace.computer, Hello
+      Send "Hello" to someplace.computer
+    > d12 | m!d12.device.pong@someplace.computer.ping
+      Send to ping port with reply-to pong port
+    < d12 | m!someplace.computer.ping!d12.device.pong
+      Reply from ping port to pong port
+    > d12 | m!d12.device@someplace.computer#1234567890, Hello
+      Reliable message with ID 1234567890
+    < d12 | m!someplace.computer@d12.device#!1234567890
+      Acknowledgment for message ID 1234567890
+    < d12 | m!someplace.computer@d12.~, Broadcast
+      Broadcast message matching parent address
+
+Access Point Special Policies
+  Follows device policies unless overridden:
+
+  Device tracking:
+    < 189 | c, device
+      Record device "device" at address 189
+    > 189 | C
+      Acknowledge ping
+  Access point queries:
+    < 189 | p
+    > 189 | P, d12, Router-d12, nil
+  Authentication:
+    < 189 | v, ""
+    > 189 | V, true, Welcome
+
+Router Special Policies
+  Specialized access point:
+
+  Address allocation:
+    < 189 | a, 189bb6e2-add7-4df2-85ce-c16534402c50
+    > 189 | A, 189bb6e2-add7-4df2-85ce-c16534402c50, d12.device, device
+      Checks name table, uses first 3 chars of MAC if unnamed
+  Device discovery:
+    < 189 | F, device
+      Adds to device table
+  Message routing:
+    < 189 | m!d12.device@d12.computer, Hello
+      For local targets: queries device table, broadcasts discovery if unknown
+    > ~~~ | f, computer
+    < 9c7 | F, computer
+    > 9c7 | m!d12.device@d12.computer, Hello
+    For non-local targets:
+    < 189 | m!d12.device@someplace.computer, Hello
+    > a4e | m!d12.device@someplace.computer, Hello
+    Broadcast handling:
+    < a4e | m!someplace.computer@d12.~, Broadcast
+    > ~~~ | m!someplace.computer@d12.~, Broadcast
+
+Switch Special Policies
+  Specialized access point:
+
+  Address forwarding:
+    < 189 | a, 189bb6e2-add7-4df2-85ce-c16534402c50
+    > d12 | a, 189bb6e2-add7-4df2-85ce-c16534402c50
+  Address response forwarding:
+    < d12 | A, 189bb6e2-add7-4df2-85ce-c16534402c50, d12.device, device
+    > 189 | A, 189bb6e2-add7-4df2-85ce-c16534402c50, d12.device, device
+  Device discovery:
+    < d12 | f, device
+    > ~~~ | f, device
+    < 189 | F, device
+    > d12 | F, device
+
+  Message routing:
+    Local targets:
+    < 189 | m!d12.device@d12.sensor, Hello
+    > d12 | m!d12.device@d12.sensor, Hello
+    Known targets:
+    < 189 | m!d12.device@d12.computer, Hello
+    > 9c7 | m!d12.device@d12.computer, Hello
+    Non-local targets:
+    < 189 | m!d12.device@someplace.computer, Hello
+    > a4e | m!d12.device@someplace.computer, Hello
+    Broadcast:
+    < a4e | m!someplace.computer@d12.~, Broadcast
+    > ~~~ | m!someplace.computer@d12.~, Broadcast

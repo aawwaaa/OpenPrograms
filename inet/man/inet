@@ -1,0 +1,220 @@
+NAME
+  inet - Network Protocol Stack for OpenComputers
+
+SYNOPSIS
+  autoconnect
+  connect [ap]
+  disconnect
+  inetclientd [-l|--logging]
+  inetconfig [-r] [--help] [c|d]
+  inetdeviced [-l|--logging] <type> [--name=<name>] [--verify=<password>] [--password=<password>] [<dev>=<name>...]
+  inetscan
+  no_shell
+  nstat
+  ping <host>
+  send [-r] <host> <message...>
+
+DESCRIPTION
+  inet is a comprehensive network protocol stack for OpenComputers that provides
+  wireless networking capabilities between computers and devices. It implements
+  a layered protocol architecture with support for routing, switching, and
+  client-server communication.
+
+  The protocol stack operates on port 10251 by default and supports various
+  device types including routers, switches, and clients. It provides reliable
+  message delivery, device discovery, and network management capabilities.
+
+COMMANDS
+  autoconnect
+    Automatically connect to available access points. This command scans for
+    available networks and attempts to connect to the first available one.
+
+  connect [ap]
+    Connect to a specific access point or scan and select from available ones.
+    If no access point is specified, displays a list of available networks
+    and prompts for selection.
+
+  disconnect
+    Disconnect from the current network connection.
+
+  inetclientd [-l|--logging]
+    Start the inet client daemon. This daemon handles network communication
+    for client devices. The -l or --logging option enables detailed logging.
+
+  inetconfig [-r] [--help] [c|d]
+    Configure network settings interactively. The -r option resets to default
+    configuration. Use c to create new configuration or d to delete existing
+    configuration. --help displays help information.
+
+  inetdeviced [-l|--logging] <type> [--name=<name>] [--verify=<password>] [--password=<password>] [<dev>=<name>...]
+    Start a network device daemon. <type> specifies the device type (router,
+    switch, root). --name sets the device name, --verify enables password
+    verification, --password sets the verification password. Additional device
+    mappings can be specified as <dev>=<name> pairs.
+
+  inetscan
+    Scan for available microcontrollers and network devices in range.
+
+  no_shell
+    Run a minimal shell that only handles events, useful for background
+    network operations.
+
+  nstat
+    Display current network status including connection state, access point,
+    device address, and known devices.
+
+  ping <host>
+    Send a ping request to the specified host address and measure response time.
+
+  send <host> <message...>
+    Send a message to the specified host. Supports both regular and reliable
+    message delivery.
+
+OPTIONS
+  -l, --logging
+    Enable detailed logging for daemon processes.
+
+  -r
+    Reset configuration to default values (inetconfig only).
+
+  --help
+    Display help information.
+
+  --name=<name>
+    Set the device name for network identification.
+
+  --verify=<password>
+    Enable password verification for network access.
+
+  --password=<password>
+    Set the password for network verification.
+
+EXAMPLES
+  # Connect to a specific access point
+  connect abc
+
+  # Scan and connect to available networks
+  connect
+
+  # Start a router device with custom name
+  inetdeviced router --name="MainRouter" --verify="password" --password="secret123"
+
+  # Start a client daemon with logging
+  inetclientd --logging
+
+  # Ping a device to test connectivity
+  ping router.abc123
+
+  # Send a message to a device
+  send router.abc123 "Hello, network!"
+
+  # Send a reliable message
+  send -r router.abc123 "Important message"
+
+  # Check network status
+  nstat
+
+  # Scan for available micro controllers
+  inetscan
+
+CONFIGURATION
+  Network configuration is stored in the inet configuration files. The inetconfig
+  command provides an interactive interface for managing these settings.
+
+  Configuration options include:
+  - Network port settings
+  - Device identification
+  - Access point configuration
+  - Security settings
+  - Routing parameters
+
+NETWORK PROTOCOL
+  The inet protocol operates in layers:
+
+  Layer 3 - Packet-based Information Transmission
+    Uses port 10251 by default. Supports message types:
+    - Regular messages: m!<src>@<dst>, ...
+    - Broadcast messages: m!<src>@<filter>.~, ...
+    - Reliable messages: m!<src>@<dst>#<id>, ...
+    - Acknowledgments: m!<src>@<dst>#!<id>
+
+  Layer 4 - Protocol Layer
+    Handles routing, device discovery, and message forwarding between
+    network devices.
+
+DEVICE TYPES
+  router
+    A network router that forwards messages between devices and manages
+    network topology.
+
+  switch
+    A network switch that connects multiple devices and provides local
+    network connectivity.
+
+  root
+    A root router that serves as the primary network access point and
+    manages the overall network structure.
+
+  client
+    A client device that connects to the network and communicates with
+    other devices through routers and switches.
+
+TROUBLESHOOTING
+  Common issues and solutions:
+
+  Connection Problems
+    - Ensure modem is available and properly configured
+    - Check that target device is in range
+    - Verify network port (10251) is not blocked
+    - Use inetscan to verify device availability
+
+  Message Delivery Issues
+    - Check device address format (device.subdevice)
+    - Verify target device is online
+    - Use ping to test connectivity
+    - Check for network congestion
+
+  Configuration Issues
+    - Use inetconfig to verify settings
+    - Reset configuration with -r option if needed
+    - Check device name and address assignments
+
+FILES
+  /bin/autoconnect.lua
+    Automatic connection script
+
+  /bin/connect.lua
+    Network connection utility
+
+  /bin/disconnect.lua
+    Network disconnection utility
+
+  /bin/inetclientd.lua
+    Client daemon implementation
+
+  /bin/inetconfig.lua
+    Configuration management utility
+
+  /bin/inetdeviced.lua
+    Device daemon implementation
+
+  /bin/inetscan.lua
+    Network scanning utility
+
+  /bin/nstat.lua
+    Network status utility
+
+  /bin/ping.lua
+    Network ping utility
+
+  /bin/send.lua
+    Message sending utility
+
+  /lib/inet/
+    Core network protocol library
+
+  /etc/inetcon.cfg
+    Network configuration file
+  
+SEE ALSO
+  inet-protocol(1), inet-build(1), inet-protocol-full(1)

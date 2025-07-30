@@ -1,0 +1,76 @@
+Name
+  inet-build - inet Network Construction Tutorial
+
+1. Network Infrastructure
+  root[a4e]: ""
+   | router[d12]: d12
+   |  | router[0cf]: d12.0cf
+   |  |  | ...
+   |  |  | device[1ed]: d12.0cf.1ed {ping, pong}
+            | port ping: d12.0cf.1ed.ping
+            | port pong: d12.0cf.1ed.pong
+   | switch[f7a]: d12
+   |  | device[189]: d12.189 {ping, pong}
+   |  | device[9c7]: d12.computer {ping, pong}
+   |
+   | router[b0a]: someplace
+   |  | device[5a1]: someplace.computer {ping, pong}
+   |  | device[037]: someplace.ap1
+   | ...
+
+  • root and routers assign sub-addresses of their own addresses to connected devices
+  • switches extend existing networks and are transparent except at access points
+  • Once addresses are assigned, devices can freely assign sub-addresses (typically for port differentiation)
+    e.g., d12.0cf.1ed.ping, d12.0cf.1ed.pong
+  • Broadcast addresses are supported (e.g., d12.~.ping)
+
+2. The Root - An Essential Computer
+  • A network requires exactly one root device
+  • The root acts as the top-level router and provides access points for all other devices
+  • The root automatically uses an empty string ("") as its address and has no access point
+  • To create a root:
+      1. Copy /etc/inetd_device.template.cfg to /etc/inetd.config
+      2. Set mode to "root"
+      3. Modify other fields as needed
+  • Only computers can serve as roots
+  • Recommended: Add `no_shell` to root's .shrc for cleaner logs (if logging is enabled)
+
+3. Assigning Device Names
+  • Configuration keys starting with "." assign names to devices
+  • Format: `[".dev"] = "name"` (where "dev" is the first 3 chars of the device's MAC address)
+  • Applies to both routers and microcontroller-based routers
+
+4. Routers - Routing Message Packets
+  • Assign sub-addresses to devices, enabling network segmentation
+  • Can be implemented via:
+      - Computers: Set mode to "router" in configuration
+      - Microcontrollers: Use EEPROM content from /usr/lib/inet/eeprom/router.lua
+  • Modify the `Cf` value before flashing EEPROM or configure wirelessly/wired later
+
+5. Runtime Configuration for Microcontrollers
+  • Use command: `inetconfig -r`
+      - Wirelessly: Scans within 5m radius
+      - Wired: Requires direct computer connection
+  • Configuration size should not exceed 256 bytes (EEPROM limitations)
+  • Microcontrollers reboot automatically after configuration
+  • Subordinate devices may require restart to refresh connections
+
+6. Switches - Extending Networks
+  • Transparently extend router coverage to distant devices
+  • Configuration similar to routers (set mode to "switch")
+  • Does NOT support device naming (router function)
+  • Microcontroller template: /usr/lib/inet/eeprom/switch.lua
+
+7. Device Connectivity
+  • Computers: Configure with `inetconfig c` (restart may be required)
+  • Microcontrollers: Modify connection info via pre-configuration or runtime configuration
+
+8. Microcontroller Devices
+  • Example code: /usr/lib/inet/eeprom/device.lua
+  • Key components:
+      - `IC`: Connection info { p: access point, a: address, t: device name }
+      - `IM`: Message queue {src, dst, ...}[]
+      - `IE()`: Blocking connection to nearby open access points (5s timeout)
+      - `IS(dst, ...)`: Send message to destination (supports broadcast addresses)
+      - `IA()`: Returns connection status (true = active)
+      - `IH(...)`: Event handler (returns nil if handled; wrap around computer.pullSignal)

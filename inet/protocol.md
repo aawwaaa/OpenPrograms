@@ -7,11 +7,11 @@
 `m!<src>@<dst>#<id>`, `...` - 常规可靠消息
 `m!<src>@<dst>#!<id>` - 应答
 
-`a`, `dev` - 请求地址
-`A`, `dev`, `address`, `this` - 响应地址
+`a`, `device-address` - 请求地址
+`A`, `device-address`, `address`, `this` - 响应地址
 
-`f`, `dev/this` - 请求临近设备完整地址
-`F`, `dev` - 自身为请求的设备
+`f`, `this` - 请求临近设备完整地址
+`F`, `this` - 自身为请求的设备或自身具有请求的设备
 
 `p` - 请求可用接入点
 `P`, `address` - 自身为可用接入点
@@ -47,7 +47,7 @@ E为事件发出者
 记录接入点地址P
 
 P> `a`, `dev`
-< `A`, `dev`, `address`
+< `A`, `dev`, `address`, `this`
 记录`address`为自身地址A=`<parent>.<dev>`
 
 通信
@@ -75,7 +75,7 @@ E: `m!<src>@<parent>.~`, `...`:
 < `P`
 记录地址P
 P> `a`, `dev`
-< `A`, `dev`, `address`
+< `A`, `dev`, `address`, `this`
 记录`address`为自身地址A，且A=`<parent>.<dev>`
 
 E: `f`, `dev`:
