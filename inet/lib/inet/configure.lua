@@ -4,6 +4,9 @@ local component = require("component")
 local computer = require("computer")
 local serialization = require("serialization")
 local shell = require("shell")
+local tty = require("tty")
+
+tty.clear()
 
 print("If you want to configure it again, run /usr/lib/inet/configure.lua")
 
@@ -12,7 +15,7 @@ local function configure_basic()
     print("2. Router")
     print("3. Switch")
     print("4. Root")
-    print("Which mode do you want to use? [1] ")
+    io.write("Which mode do you want to use? [1] ")
     
     local mode = ({
         ["1"] = "client",
@@ -41,18 +44,19 @@ local function configure_basic()
         for i, address in ipairs(modems) do
             print(i .. ". " .. address)
         end
+        io.write("Select one: ")
         local index = tonumber(io.read("*l"))
         modem = modems[index]
     end
 
     print("Modem: " .. modem)
 
-    print("Port for inet: [10251] ")
+    io.write("Port for inet: [10251] ")
     local port = tonumber(io.read("*l")) or 10251
 
     print("Port: " .. port)
 
-    print("Logging? This is for debugging or demonstation. [false] ")
+    io.write("Logging? This is for debugging or demonstation. [false] ")
     local logging = io.read("*l"):sub(1,1) == "t"
 
     return {
@@ -66,7 +70,7 @@ end
 
 local function configure_access_point(config)
     local default = config.mode .. "-" .. config.modem:sub(1,8)
-    print("Name for access point? [".. default .. "]")
+    io.write("Name for access point? [".. default .. "] ")
     local name = io.read("*l")
     if name == "" then
         name = default
@@ -75,7 +79,7 @@ local function configure_access_point(config)
 
     print("1. None")
     print("2. Password")
-    print("Verify type? [1]")
+    io.write("Verify type? [1] ")
     local verify = ({
         ["1"] = nil,
         ["2"] = "password",
@@ -83,7 +87,7 @@ local function configure_access_point(config)
     config.verify = verify
 
     if verify == "password" then
-        print("Password? ")
+        io.write("Password? ")
         local password = io.read("*l")
         config.password = password
     end
@@ -94,7 +98,7 @@ end
 local function configure_router()
     print("You can assign a name to devices connected to the router, by inetconfig d later.")
     print("The format is: .dev=name, where dev is the first 3 characters of the device's modem's address.")
-    print("Do you want to run it now? [y]")
+    io.write("Do you want to run it now? [y]")
 
     local run = io.read("*l"):sub(1,1) == "y"
     if run then
@@ -107,7 +111,7 @@ if config.mode ~= "client" then
     configure_access_point(config)
 end
 
-print("Writing config to /etc/inetd.cfg")
+io.write("Writing config to /etc/inetd.cfg")
 local file = io.open("/etc/inetd.cfg", "w")
 if file then
     file:write(serialization.serialize(config, math.huge))
