@@ -35,7 +35,7 @@ Ms={
 P=function(s,...) if s:sub(1,#Co)==Co and Es<0 then Pa=s; Ac[s]=true; S(Pa,"v",Cf.connect_verify) end end,
 V=function(s,r,m) if not r then Ad="Verify failed "..m Es=-1 end Es=0 S(s,"a",Da) end,
 A=function(s,d,a,t) Ad=a Es=1 local pa=a:match("^(.+)%.")or"" Ba=pa..(pa~=""and"."or"").."~" Pt=T()+5 Th=t end,
-f=function(s,d) if N(Da)==d then S(s,"F",d) end end,
+f=function(s,d) if Th==d then S(s,"F",d) end end,
 C=function() Pt=T()+5 end,
 -- access point
 p=function(s) if Es==1 and s~=Pa and not Cf.hidden then S(s,"P",Ad or "l",Na,Pw~=""and"password"or nil) end end,

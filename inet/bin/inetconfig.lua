@@ -47,7 +47,7 @@ local function edit(configs, save, max)
     local serialized = ""
 
     local function draw()
-        serialized = serialization.serialize(configs)
+        serialized = serialization.serialize(configs, max == nil)
         term.clear()
         term.setCursor(1, 1)
         term.write("--- Config ---\n")
@@ -134,7 +134,10 @@ end
 local args, options = shell.parse(...)
 
 if options.h or options.help then
-    print("Usage: inetcfg [--help] [-r]")
+    print("Usage: inetcfg [--help] [-r] [d|c]")
+    print("Args:")
+    print("  d            Edit daemon config")
+    print("  c            Edit connection config")
     print("Options:")
     print("  --help, -h    Show this help message")
     print("  -r            Connect to micro controller")
@@ -204,22 +207,30 @@ if options.r then
     return
 end
 
-local file = io.open("/etc/inetd.cfg", "r")
-if not file then
-    print("Error: Failed to read file")
-    return
-end
-local data = file:read("*a")
-file:close()
-
-local configs = serialization.unserialize(data)
-
-edit(configs, function(serialized)
-    file = io.open("/etc/inetd.cfg", "w")
+local function edit_file(path)
+    local file = io.open(path, "r")
     if not file then
-        print("Error: Failed to write file")
+        print("Error: Failed to read file")
         return
     end
-    file:write(serialized)
+    local data = file:read("*a")
     file:close()
-end)
+
+    local configs = serialization.unserialize(data)
+
+    edit(configs, function(serialized)
+        file = io.open(path, "w")
+        if not file then
+            print("Error: Failed to write file")
+            return
+        end
+        file:write(serialized)
+        file:close()
+    end)
+end
+
+if args[1] == "d" or args[1] == "daemon" then
+    edit_file("/etc/inetd.cfg")
+elseif args[1] == "c" or args[1] == "con" or args[1] == "connection" then
+    edit_file("/etc/inetcon.cfg")
+end

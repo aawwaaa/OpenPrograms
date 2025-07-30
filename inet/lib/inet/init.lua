@@ -32,6 +32,12 @@ local con = {
     broadcast = nil,
 }
 M.con = con
+local connection_info = {
+    disconnect_manually = false,
+    ap = nil,
+    verify = nil,
+    retry_timer = 0
+}
 M.mode = function() return mode end
 M.set_mode = function(m)
     mode = m
@@ -66,7 +72,8 @@ local timeouts = {
     ping = 3,
     ping_disconnect = 10,
     ack = 5,
-    device = 300
+    device = 300,
+    connect_retry = 15
 }
 local max_tries = 5
 local short_device_length = 3
@@ -194,7 +201,7 @@ local signals = {
         debug_log(log_type.ping, "Pong")
     end,
     [messages.request_nearby_device] = function(src_modem, device)
-        if inetmodem:sub(1, #device) == device then
+        if con.this == device then
             send(src_modem, messages.response_nearby_device, device)
             log(log_type.discover, "Response nearby device: " .. device .. " -> " .. src_modem)
         end
@@ -296,6 +303,17 @@ local function timer()
         end
         ::continue::
     end
+    if status == "disconnected" and not connection_info.disconnect_manually then
+        if connection_info.retry_timer < uptime() then
+            connection_info.retry_timer = uptime() + timeouts.connect_retry
+            log(log_type.assign, "Retry connect to: " .. connection_info.ap)
+            require("thread").create(function()
+                M.connect_to(connection_info.ap)
+                M.verify(table.unpack(connection_info.verify))
+                M.request_address()
+            end):start()
+        end
+    end
 end
 
 local inited = false
@@ -329,6 +347,7 @@ function M.init(options)
         end
     end, timer
 end
+function M.inited() return inited end
 local function wait(t)
     local end_time = uptime() + t
     while uptime() < end_time do
@@ -346,12 +365,15 @@ function M.connect_to(point)
     update_status("connecting")
     con.ap = point
     con.ap_data = access_points[point]
+    connection_info.ap = point
+    connection_info.disconnect_manually = false
     log(log_type.assign, "Connect to: " .. point)
     last_ping = uptime() + timeouts.ping
 end
 function M.verify(...)
     send(con.ap, messages.verify, ...)
     log(log_type.verify, "Verify: ", ...)
+    connection_info.verify = table.pack(...)
     local signal, result, message = pull_signal_internal("response_verify", timeouts.verify)
     if signal == nil then
         update_status("disconnected", "timeout")
@@ -395,6 +417,7 @@ function M.disconnect()
     con.this = nil
     con.broadcast = nil
     con.parent_esc = nil
+    connection_info.disconnect_manually = true
 end
 function M.auto_connect()
     update_status("connecting")
@@ -435,14 +458,23 @@ function M.status()
 end
 
 function M.send(dst, ...)
+    if status ~= "connected" then
+        return
+    end
     log(log_type.message, "Send: " .. con.addr .. " -> " .. dst, ...)
     send(con.ap, "m!" .. con.addr .. "@" .. dst, ...)
 end
 function M.send_suffix(suffix, dst, ...)
+    if status ~= "connected" then
+        return
+    end
     log(log_type.message, "Send: " .. con.addr .. address_spacing .. suffix .. " -> " .. dst, ...)
     send(con.ap, "m!" .. con.addr .. address_spacing .. suffix .. "@" .. dst, ...)
 end
 function M.send_reliable(dst, ...)
+    if status ~= "connected" then
+        return
+    end
     local id = tostring(math.random(1000000000, 9999999999))
     send(con.ap, "m!" .. con.addr .. "@" .. dst .. "#" .. id, ...)
     wait_for_ack[id] = {
@@ -455,6 +487,9 @@ function M.send_reliable(dst, ...)
     return id
 end
 function M.send_reliable_suffix(suffix, dst, ...)
+    if status ~= "connected" then
+        return
+    end
     local id = tostring(math.random(1000000000, 9999999999))
     send(con.ap, "m!" .. con.addr .. address_spacing .. suffix .. "@" .. dst .. "#" .. id, ...)
     wait_for_ack[id] = {
@@ -467,6 +502,9 @@ function M.send_reliable_suffix(suffix, dst, ...)
     return id
 end
 function M.broadcast(...)
+    if status ~= "connected" then
+        return
+    end
     log(log_type.message, "Broadcast: " .. con.addr .. " -> " .. con.broadcast, ...)
     send(con.ap, "m!" .. con.addr .. "@" .. con.broadcast, ...)
 end
