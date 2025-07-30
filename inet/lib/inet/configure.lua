@@ -98,7 +98,7 @@ end
 local function configure_router()
     print("You can assign a name to devices connected to the router, by inetconfig d later.")
     print("The format is: .dev=name, where dev is the first 3 characters of the device's modem's address.")
-    io.write("Do you want to run it now? [y]")
+    io.write("Do you want to run it now? [n]")
 
     local run = io.read("*l"):sub(1,1) == "y"
     if run then
