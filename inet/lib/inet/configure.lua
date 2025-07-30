@@ -1,5 +1,3 @@
-print("Configuring Inet...")
-
 local component = require("component")
 local computer = require("computer")
 local serialization = require("serialization")
@@ -7,6 +5,8 @@ local shell = require("shell")
 local tty = require("tty")
 
 tty.clear()
+
+print("Configuring Inet...")
 
 print("If you want to configure it again, run /usr/lib/inet/configure.lua")
 
@@ -102,7 +102,7 @@ local function configure_router()
 
     local run = io.read("*l"):sub(1,1) == "y"
     if run then
-        loadfile(shell.resolve("inetconfig"))("d")
+        loadfile(shell.resolve("inetconfig","lua"))("d")
     end
 end
 
@@ -111,7 +111,7 @@ if config.mode ~= "client" then
     configure_access_point(config)
 end
 
-io.write("Writing config to /etc/inetd.cfg")
+io.write("Writing config to /etc/inetd.cfg\n")
 local file = io.open("/etc/inetd.cfg", "w")
 if file then
     file:write(serialization.serialize(config, math.huge))
