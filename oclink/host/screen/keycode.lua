@@ -1,0 +1,155 @@
+local keycode = {
+    c               = 0x2E,
+    d               = 0x20,
+    q               = 0x10,
+    w               = 0x11,
+    backspace       = 0x0E, -- backspace
+    delete          = 0xD3,
+    down            = 0xD0,
+    ["return"]      = 0x1C,
+    home            = 0xC7,
+    lctrl           = 0x1D,
+    left            = 0xCB,
+    lalt            = 0x38, -- left Alt
+    lshift          = 0x2A,
+    pageDown        = 0xD1,
+    rctrl           = 0x9D,
+    right           = 0xCD,
+    ralt            = 0xB8, -- right Alt
+    rshift          = 0x36,
+    space           = 0x39,
+    tab             = 0x0F,
+    up              = 0xC8,
+    ["end"]         = 0xCF,
+}
+
+keycode["1"]           = 0x02
+keycode["2"]           = 0x03
+keycode["3"]           = 0x04
+keycode["4"]           = 0x05
+keycode["5"]           = 0x06
+keycode["6"]           = 0x07
+keycode["7"]           = 0x08
+keycode["8"]           = 0x09
+keycode["9"]           = 0x0A
+keycode["0"]           = 0x0B
+keycode.a               = 0x1E
+keycode.b               = 0x30
+keycode.c               = 0x2E
+keycode.d               = 0x20
+keycode.e               = 0x12
+keycode.f               = 0x21
+keycode.g               = 0x22
+keycode.h               = 0x23
+keycode.i               = 0x17
+keycode.j               = 0x24
+keycode.k               = 0x25
+keycode.l               = 0x26
+keycode.m               = 0x32
+keycode.n               = 0x31
+keycode.o               = 0x18
+keycode.p               = 0x19
+keycode.q               = 0x10
+keycode.r               = 0x13
+keycode.s               = 0x1F
+keycode.t               = 0x14
+keycode.u               = 0x16
+keycode.v               = 0x2F
+keycode.w               = 0x11
+keycode.x               = 0x2D
+keycode.y               = 0x15
+keycode.z               = 0x2C
+
+keycode["'"]            = 0x28
+keycode["@"]            = 0x91
+keycode.backspace       = 0x0E -- backspace
+keycode["\\"]           = 0x2B
+keycode.capslock        = 0x3A -- capslock
+keycode[":"]            = 0x92
+keycode[","]            = 0x33
+keycode["return"]       = 0x1C
+keycode["="]            = 0x0D
+keycode["`"]            = 0x29 -- accent grave
+keycode["["]            = 0x1A
+keycode.lctrl           = 0x1D
+keycode.lalt            = 0x38 -- left Alt
+keycode.lshift          = 0x2A
+keycode["-"]            = 0x0C
+keycode.numlock         = 0x45
+keycode.pause           = 0xC5
+keycode["."]            = 0x34
+keycode["]"]            = 0x1B
+keycode.rctrl           = 0x9D
+keycode.ralt            = 0xB8 -- right Alt
+keycode.rshift          = 0x36
+keycode.scroll          = 0x46 -- Scroll Lock
+keycode[";"]            = 0x27
+keycode["/"]            = 0x35 -- / on main keyboard
+keycode.space           = 0x39
+keycode.stop            = 0x95
+keycode.tab             = 0x0F
+keycode["_"]            = 0x93
+
+-- Keypad (and numpad with numlock off)
+keycode.up              = 0xC8
+keycode.down            = 0xD0
+keycode.left            = 0xCB
+keycode.right           = 0xCD
+keycode.home            = 0xC7
+keycode["end"]         = 0xCF
+keycode.pageup          = 0xC9
+keycode.pagedown        = 0xD1
+keycode.insert          = 0xD2
+keycode.delete          = 0xD3
+
+-- Function keys
+keycode.f1              = 0x3B
+keycode.f2              = 0x3C
+keycode.f3              = 0x3D
+keycode.f4              = 0x3E
+keycode.f5              = 0x3F
+keycode.f6              = 0x40
+keycode.f7              = 0x41
+keycode.f8              = 0x42
+keycode.f9              = 0x43
+keycode.f10             = 0x44
+keycode.f11             = 0x57
+keycode.f12             = 0x58
+keycode.f13             = 0x64
+keycode.f14             = 0x65
+keycode.f15             = 0x66
+keycode.f16             = 0x67
+keycode.f17             = 0x68
+keycode.f18             = 0x69
+keycode.f19             = 0x71
+
+-- Japanese keyboards
+keycode.kana            = 0x70
+keycode.kanji           = 0x94
+keycode.convert         = 0x79
+keycode.noconvert       = 0x7B
+keycode.yen             = 0x7D
+keycode.circumflex      = 0x90
+keycode.ax              = 0x96
+
+-- Numpad
+keycode.numpad0         = 0x52
+keycode.numpad1         = 0x4F
+keycode.numpad2         = 0x50
+keycode.numpad3         = 0x51
+keycode.numpad4         = 0x4B
+keycode.numpad5         = 0x4C
+keycode.numpad6         = 0x4D
+keycode.numpad7         = 0x47
+keycode.numpad8         = 0x48
+keycode.numpad9         = 0x49
+keycode.numpadmul       = 0x37
+keycode.numpaddiv       = 0xB5
+keycode.numpadsub       = 0x4A
+keycode.numpadadd       = 0x4E
+keycode.numpaddecimal   = 0x53
+keycode.numpadcomma     = 0xB3
+keycode.numpadenter     = 0x9C
+keycode.numpadequals    = 0x8D
+
+return keycode
