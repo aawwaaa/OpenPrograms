@@ -98,9 +98,11 @@ local function receive(once)
             [string.char(0x01)] = function(data) return data end,
             [string.char(0x02)] = function(data) return tonumber(data) end,
             [string.char(0x03)] = function(data) return data == "true" or data == "1" end,
+            [string.char(0x04)] = function(data) return load("return " .. data)() end,
         })[type_data]
         if not decoder then error("Unknown type: " .. type_data) end
         table.insert(output, decoder(value))
+        -- ocelot.log("R | " .. type_data .. " " .. value)
         data = data:sub(6 + length)
     until #data == 0
     return output

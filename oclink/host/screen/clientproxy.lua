@@ -11,6 +11,65 @@ else
 }]])()
 end
 
+local function serialize(obj, indent, nested)
+    indent = indent or ""
+    nested = nested or false
+    local lua = ""
+    local t = type(obj)
+    
+    if t == "number" then
+        lua = lua .. obj
+    elseif t == "boolean" then
+        lua = lua .. tostring(obj)
+    elseif t == "string" then
+        lua = lua .. string.format("%q", obj)
+    elseif t == "table" then
+        -- 检查是否是数组（连续数字索引）
+        local is_array = true
+        local max_index = 0
+        for k, _ in pairs(obj) do
+            if type(k) ~= "number" or k ~= math.floor(k) or k < 1 then
+                is_array = false
+                break
+            end
+            if k > max_index then max_index = k end
+        end
+        
+        if is_array and max_index == #obj then
+            -- 数组风格
+            lua = lua .. "{"
+            for i = 1, max_index do
+                if i > 1 then lua = lua .. ", " end
+                lua = lua .. serialize(obj[i], indent, true)
+            end
+            lua = lua .. "}"
+        else
+            -- 表风格
+            lua = lua .. "{\n"
+            local new_indent = indent .. "  "
+            local first = true
+            for k, v in pairs(obj) do
+                if not first then lua = lua .. ",\n" end
+                first = false
+                
+                -- 对于符合Lua标识符规则的字符串键，可以使用 . 表示法
+                if type(k) == "string" and string.match(k, "^[a-zA-Z_][a-zA-Z0-9_]*$") then
+                    lua = lua .. new_indent .. k .. " = " .. serialize(v, new_indent, true)
+                else
+                    lua = lua .. new_indent .. "[" .. serialize(k, new_indent, true) .. "] = " .. serialize(v, new_indent, true)
+                end
+            end
+            lua = lua .. "\n" .. indent .. "}"
+        end
+    elseif t == "nil" then
+        lua = lua .. "nil"
+    else
+        error("can't serialize a " .. t)
+    end
+    
+    return lua
+end
+
 local ClientProxy = {}
 ClientProxy.__index = ClientProxy
 
@@ -54,11 +113,17 @@ function ClientProxy:send(...)
             ["string"] = string.char(0x01),
             ["number"] = string.char(0x02),
             ["boolean"] = string.char(0x03),
+            ["table"] = string.char(0x04),
         })[ty or "nil"]
         if not type_data then
             error("Unknown type: " .. ty)
         end
-        local data = tostring(value)
+        local data;
+        if ty == "table" then
+            data = serialize(value)
+        else
+            data = tostring(value)
+        end
         encoded = encoded .. type_data .. encode_i32(#data) .. data
     end
     encoded = encode_i32(#encoded + 1) .. encoded .. "\n"
@@ -106,6 +171,7 @@ function ClientProxy:receive()
             [string.char(0x01)] = function(data) return data end,
             [string.char(0x02)] = function(data) return tonumber(data) end,
             [string.char(0x03)] = function(data) return data == "true" or data == "1" end,
+            [string.char(0x04)] = function(data) return load("return " .. data)() end,
         })[type_data]
         if not decoder then error("Unknown type: " .. (string.byte(type_data) or 0)) end
         table.insert(output, decoder(value))

@@ -88,8 +88,8 @@ function M.fill(buffer, x, y, w, h, value, fg, bg)
     if y + h > buffer.h then
         h = buffer.h - y + 1
     end
-    w = w + 1
-    for current_y = y, y + h do
+    w = math.floor(w)
+    for current_y = y, y + h - 1 do
         local offset = (current_y - 1) * buffer.w * 4 + (x - 1) * 4 + 1
         buffer.chars = modify(buffer.chars, offset, string.char(
             bit.rshift(bit.band(value, 0xFF000000), 24),
@@ -116,6 +116,7 @@ function M.slice(buffer, x, y, w, h)
     local slice_chars = ""
     local slice_fgs = ""
     local slice_bgs = ""
+    w = math.floor(w)
     for current_y = y, y + h - 1 do
         local offset = (current_y - 1) * buffer.w * 4 + (x - 1) * 4 + 1
         slice_chars = slice_chars .. buffer.chars:sub(offset, offset + w * 4 - 1)
@@ -125,6 +126,7 @@ function M.slice(buffer, x, y, w, h)
     return slice_chars, slice_fgs, slice_bgs
 end
 function M.apply(buffer, x, y, w, h, slice_chars, slice_fgs, slice_bgs)
+    w = math.floor(w)
     for current_y = y, y + h - 1 do
         local offset = (current_y - 1) * buffer.w * 4 + (x - 1) * 4 + 1
         local slice_offset = (current_y - y) * w * 4 + 1
@@ -134,6 +136,20 @@ function M.apply(buffer, x, y, w, h, slice_chars, slice_fgs, slice_bgs)
             slice_fgs:sub(slice_offset, slice_offset + w * 4 - 1))
         buffer.bgs = modify(buffer.bgs, offset,
             slice_bgs:sub(slice_offset, slice_offset + w * 4 - 1))
+    end
+end
+
+for k, v in pairs(M) do
+    if type(v) == "function" then
+        M[k] = function(...)
+            local result = {xpcall(v, debug.traceback, ...)}
+            if not result[1] then
+                print(k, ...)
+                print(result[2])
+                return nil
+            end
+            return (table.unpack or unpack)(result, 2)
+        end
     end
 end
 

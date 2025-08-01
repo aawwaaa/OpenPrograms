@@ -12,8 +12,11 @@ local roles = {
     computer = require("role.computer"),
     screen = require("role.screen"),
 }
+local vcomponent = {
+    filesystem = require("vcomponent.filesystem"),
+}
 roles.computer.vcomponents = {
-
+    ["file"] = vcomponent.filesystem("filesyst-em00-4000-0000-000000000000", "./vfs"),
 }
 roles.computer.handlers = {
     gpu = require("handler.gpu"),

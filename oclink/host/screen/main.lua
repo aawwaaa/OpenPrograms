@@ -113,7 +113,7 @@ function love.update(dt)
     if err == "closed" then
         love.event.quit()
     end
-    if client:has() then
+    while client:has() do
         local packed = {client:receive()}
         local h = handler[packed[1]]
         if h then
@@ -190,19 +190,24 @@ end
 local keycode = require("keycode")
 
 local last_pressed = nil
-local chars = {}
+local chars = {
+    ["return"] = 13,
+    ["backspace"] = 8
+}
 function love.keypressed(key)
     if key == "insert" then
         client:send("clipboard", love.system.getClipboardText())
         return
     end
     last_pressed = key
-    chars[last_pressed] = 0
+    if chars[last_pressed] == nil then
+        chars[last_pressed] = 0
+    end
     if (#key == 1 or key == "space") and not (
             love.keyboard.isDown("lctrl") or love.keyboard.isDown("rctrl") or
             love.keyboard.isDown("lalt") or love.keyboard.isDown("ralt")
         ) then return end
-    client:send("key_down", 0, keycode[key])
+    client:send("key_down", chars[key], keycode[key])
 end
 function love.textinput(text)
     if not last_pressed then return end

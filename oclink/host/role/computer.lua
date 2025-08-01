@@ -36,7 +36,10 @@ M.onmessage = function(client, type, ...)
     end
     if type == "i" then
         local address, method = ...
-        client:send("r", M.vcomponents[address][method](select(3, ...)))
+        -- print(...)
+        local packed = {M.vcomponents[address][method](select(3, ...))}
+        -- print(table.unpack(packed))
+        client:send("r", table.unpack(packed))
     end
     if type == "im" then
         local address, method = ...
