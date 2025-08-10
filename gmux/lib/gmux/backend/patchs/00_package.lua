@@ -35,7 +35,7 @@ return function(instances)
     local loading = {}
     package.loaded = loaded
     package.preload = {}
-    for k, v in pairs(_package.preload) do
+    for k, v in pairs(_package.preload or {}) do
         package.preload[k] = v
     end
     package.searchers = {}
